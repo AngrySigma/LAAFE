@@ -1,8 +1,8 @@
 import os
+from dataclasses import dataclass
 
 import openai
 from dotenv import load_dotenv
-from dataclasses import dataclass
 
 
 @dataclass
@@ -15,7 +15,7 @@ class ChatMessage:
 
 
 class ChatBot:
-    def __init__(self, model='gpt-3.5-turbo'):
+    def __init__(self, model="gpt-3.5-turbo"):
         load_dotenv()
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.organization = os.getenv("OPENAI_API_ORGANIZATION")
@@ -23,13 +23,15 @@ class ChatBot:
         openai.organization = self.organization
         self.model = model
 
-    def get_completion(self, messages: ChatMessage, max_tokens=150, stop=None,
-                       temperature=1, n=1):
+    def get_completion(
+        self, messages: ChatMessage, max_tokens=150, stop=None, temperature=1, n=1
+    ):
         """
         Get completion from openai chatbot
         """
-        messages = [{'role': message.role, 'content': message.content} for
-                    message in messages]
+        messages = [
+            {"role": message.role, "content": message.content} for message in messages
+        ]
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=messages,
