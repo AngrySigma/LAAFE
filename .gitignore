@@ -161,3 +161,5 @@ cython_debug/
 
 # User added
 catboost_info/
+outputs/
+notebooks/
