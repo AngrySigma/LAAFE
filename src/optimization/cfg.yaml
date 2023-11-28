@@ -1,0 +1,26 @@
+problem_type: "classification"
+classification:
+  metrics:
+    - "accuracy"
+    - "f1"
+    - "precision"
+    - "recall"
+    - "roc_auc"
+  datasets:
+    - 31
+    - 1464
+    - 334
+    - 50
+
+regression:
+  metrics:
+    - "mean_absolute_error"
+    - "mean_squared_error"
+    - "root_mean_squared_error"
+    - "mean_squared_logarithmic_error"
+    - "median_absolute_error"
+  datasets:
+    - 8
+    - 204
+    - 210
+    - 560
