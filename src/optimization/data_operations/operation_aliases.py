@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from ABC import ABC, abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
@@ -105,13 +105,13 @@ class Minmax(Operation):
 
 # operation types: unary, binary, n-ary
 OPERATIONS = {
-    'add': Add,
-    'sub': Sub,
-    'mul': Mul,
-    'div': Div,
-    'pca': Pca,
-    'fillna_mean': Fillna_mean,
-    'fillna_median': Fillna_median,
-    'std': Std,
-    'minmax': Minmax,
+    'add': Add(),
+    'sub': Sub(),
+    'mul': Mul(),
+    'div': Div(),
+    'pca': Pca(),
+    'fillna_mean': Fillna_mean(),
+    'fillna_median': Fillna_median(),
+    'std': Std(),
+    'minmax': Minmax(),
 }

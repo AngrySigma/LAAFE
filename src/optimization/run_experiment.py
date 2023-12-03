@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig
 from src.optimization.data_operations.dataset_loaders import load_dataset
-
+from src.optimization.llm.llm_templates import LLMTemplate
 
 @hydra.main(version_base=None,
             config_path='D:/PhD/LAAFE/src/optimization',
@@ -9,7 +9,9 @@ from src.optimization.data_operations.dataset_loaders import load_dataset
 def main(cfg: DictConfig):
     dataset_id = cfg[cfg.problem_type].datasets[0]
     dataset = load_dataset(dataset_id)
+    llm_template = LLMTemplate(operators=cfg.llm.operators)
     print(dataset)
+    print(llm_template)
 
 
 # define data operation pipeline format (fix)
