@@ -2,6 +2,7 @@ import hydra
 from omegaconf import DictConfig
 from src.optimization.data_operations.dataset_loaders import load_dataset
 
+
 @hydra.main(version_base=None,
             config_path='D:/PhD/LAAFE/src/optimization',
             config_name='cfg')
@@ -11,10 +12,9 @@ def main(cfg: DictConfig):
     print(dataset)
 
 
+# define data operation pipeline format (fix)
 
 
-# define data operation pipeline format
-# define operator space
 # pass to LLM
 
 # get metrics

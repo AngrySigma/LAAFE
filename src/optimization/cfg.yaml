@@ -24,3 +24,14 @@ regression:
     - 204
     - 210
     - 560
+llm:
+  operators:
+    - "add"
+    - "sub"
+    - "mul"
+    - "div"
+    - "pca"
+    - "fillna_mean"
+    - "fillna_median"
+    - "std"
+    - "minmax"
