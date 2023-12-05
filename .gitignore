@@ -165,6 +165,5 @@ outputs/
 notebooks/
 data/
 
-*.ipynb
-*.csv
-*.cfg.yaml
+*cfg.yaml
+*ipynb
