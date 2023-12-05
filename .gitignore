@@ -164,3 +164,7 @@ catboost_info/
 outputs/
 notebooks/
 data/
+
+*.ipynb
+*.csv
+cfg.yaml
