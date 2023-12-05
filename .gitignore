@@ -167,4 +167,4 @@ data/
 
 *.ipynb
 *.csv
-cfg.yaml
+.*cfg.yaml
