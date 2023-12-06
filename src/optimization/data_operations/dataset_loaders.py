@@ -18,13 +18,18 @@ class OpenMLDataset:
     qualities: dict
 
     def __repr__(self):
-        return (f'\nDataset name: {self.name}'
+        return (f'\nDataset description will be provided further.'
+                f'\nSTART DATASET DESCRIPTION'
+                f'\nDataset name: {self.name}'
                 f'\nDescription:\n{self.description}'
                 f'\nData example:\n{self.data[:5]}'
                 f'\nTarget:\n{self.target[:5]}'
                 f'\nCollection_date: {self.collection_date}'
+                f'\nEND DATASET DESCRIPTION'
                 )
 
+    def __str__(self):
+        return self.__repr__()
 
 class DatasetLoader:
     def __init__(self, dataset_ids):
