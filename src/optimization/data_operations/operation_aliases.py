@@ -71,7 +71,9 @@ class Fillna_mean(Operation):
         super().__init__()
         self.description = 'Fill missing values with mean'
 
-    def __call__(self, df, inp):
+    def __call__(self, df, inp=None):
+        if inp is None:
+            return df.fillna(df.mean())
         return df[inp].fillna(df[inp].mean())
 
 
@@ -80,7 +82,9 @@ class Fillna_median(Operation):
         super().__init__()
         self.description = 'Fill missing values with median'
 
-    def __call__(self, df, inp):
+    def __call__(self, df, inp=None):
+        if inp is None:
+            return df.fillna(df.median())
         return df[inp].fillna(df[inp].median())
 
 
@@ -89,7 +93,10 @@ class Std(Operation):
         super().__init__()
         self.description = 'Standardize input columns'
 
-    def __call__(self, df, inp):
+    def __call__(self, df, inp=None):
+        if inp is None:
+            return pd.DataFrame(StandardScaler().fit_transform(df),
+                                columns=df.columns)
         return pd.DataFrame(StandardScaler().fit_transform(df[inp]),
                             columns=inp)
 
@@ -99,7 +106,10 @@ class Minmax(Operation):
         super().__init__()
         self.description = 'Minmax input columns'
 
-    def __call__(self, df, inp):
+    def __call__(self, df, inp=None):
+        if inp is None:
+            return pd.DataFrame(MinMaxScaler().fit_transform(df),
+                                columns=df.columns)
         return pd.DataFrame(MinMaxScaler().fit_transform(df[inp]), columns=inp)
 
 
