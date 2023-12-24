@@ -1,72 +1,122 @@
+import os
+from pathlib import Path
+import logging
+
+from sklearn.linear_model import LinearRegression
+from sklearn.svm import SVC
+from time import sleep
+import time
 import hydra
+from tqdm import tqdm, trange
 from omegaconf import DictConfig
 from src.optimization.data_operations.dataset_loaders import DatasetLoader
-from src.optimization.data_operations.operation_pipeline import \
-    parse_data_operation_pipeline, apply_pipeline
+from src.optimization.data_operations.operation_pipeline import (
+    parse_data_operation_pipeline,
+    apply_pipeline,
+)
 from src.optimization.llm.llm_templates import LLMTemplate
 from src.optimization.llm.gpt import ChatBot, ChatMessage, MessageHistory
 from fedot.api.main import Fedot
 from sklearn.model_selection import train_test_split
 import numpy as np
 from catboost import CatBoostClassifier
+from src.optimization.models.model_training import (
+    CatboostClassifierModel,
+    LinearClassifierModel,
+    SVMClassifierModel,
+    RandomForestClassifierModel,
+)
+
+np.random.seed(42)
 
 
-@hydra.main(version_base=None,
-            config_path='D:/PhD/LAAFE/',
-            config_name='cfg')
-def main(cfg: DictConfig):
-    chatbot = ChatBot(api_key=cfg.llm.gpt.openai_api_key,
-                      api_organization=cfg.llm.gpt.openai_api_organization,
-                      model=cfg.llm.gpt.model_name)
+def write_model_evaluation(metrics, results_dir: Path):
+    with open(results_dir / "metric_results.txt", "a") as file:
+        file.write(f"\t{metrics}")
+
+
+def write_dataset_name(dataset_name, results_dir: Path):
+    with open(results_dir / "metric_results.txt", "a") as file:
+        file.write(f"\n{dataset_name}")
+
+
+def run_feature_generation_experiment(cfg):
+    # this all should be in a config file somewhere
+    time_now = time.strftime("%Y%m%d-%H%M%S")
+    os.makedirs(f"D:/PhD/LAAFE/results/{time_now}")
+    results_dir: Path = Path("D:/PhD/LAAFE/results/") / time_now
+    chatbot = ChatBot(
+        api_key=cfg.llm.gpt.openai_api_key,
+        api_organization=cfg.llm.gpt.openai_api_organization,
+        model=cfg.llm.gpt.model_name,
+    )
     llm_template = LLMTemplate(operators=cfg.llm.operators)
+    model = RandomForestClassifierModel
 
-    dataset_ids = cfg[cfg.problem_type].datasets[
-                  :1]  # take first dataset for now
+    dataset_ids = cfg[cfg.problem_type].datasets[:3]  # take first dataset for now
     dataset_loader = DatasetLoader(dataset_ids=dataset_ids)
+    counter = 1
     for dataset in dataset_loader:
+        logging.info(f"Processing dataset {1}/{len(dataset_loader)}: {dataset.name}")
+        counter += 1
+        np.random.seed(42)
+        write_dataset_name(dataset.name, results_dir)
         data_train, data_test, target_train, target_test = train_test_split(
-            np.array(dataset.data), np.array(dataset.target), test_size=0.2)
-        model = CatBoostClassifier()
-        model.fit(data_train, target_train)
-        metrics = model.score(data_test, target_test)
+            np.array(dataset.data), np.array(dataset.target), test_size=0.2
+        )
+        metrics = model().train(data_train, target_train, data_test, target_test)
+        write_model_evaluation(metrics, results_dir)
+        logging.info(f'Initial 0: {metrics["accuracy"]}')
 
         messages = MessageHistory()
         messages.add_message(llm_template.initial_template())
         messages.add_message(str(dataset))
         messages.add_message(llm_template.previous_evaluations_template())
         messages.add_message(llm_template.instruction_template())
-        messages.add_pipeline_evaluation('Initial evaluation', metrics)
+        messages.add_pipeline_evaluation("Initial evaluation", metrics)
+
         for _ in range(cfg.experiment.num_iterations):
+            np.random.seed(42)
             completion = chatbot.get_completion(messages=messages)
+            # completion = 'std(V1), fillna_median(V2), std(V3), fillna_mean(V4)'
             try:
-                # completion = 'Fillna_mean(V1), Fillna_median(V2), Fillna_mean(V3), Fillna_median(V4)'
-                # completion = "Fillna_mean(duration), Fillna_mean(credit_amount), Fillna_mean(present_employment), Fillna_median(age), Minmax(duration), Minmax(credit_amount), Minmax(present_employment), Minmax(age)"
                 pipeline = parse_data_operation_pipeline(completion)
-                dataset_mod = apply_pipeline(dataset.data, pipeline)
+                dataset_mod = dataset.data.copy()
+                dataset_mod = apply_pipeline(dataset_mod, pipeline)
+
                 data_train, data_test, target_train, target_test = train_test_split(
-                    np.array(dataset_mod), np.array(dataset.target),
-                    test_size=0.2)
+                    np.array(dataset_mod), np.array(dataset.target), test_size=0.2
+                )
                 # TODO: fix data leak
-                # model = Fedot(problem=cfg.problem_type, preset='light',
-                #               timeout=10)
-                # model.fit(features=data_train, target=target_train)
-                # prediction = model.predict(features=data_test)
-                # metrics = model.get_metrics(target=target_test,
-                #                             metric_names=cfg.metrics)
-                model = CatBoostClassifier()
-                model.fit(data_train, target_train)
-                metrics = model.score(data_test, target_test)
+
+                metrics = model(random_state=42).train(
+                    data_train, target_train, data_test, target_test
+                )
+                write_model_evaluation(metrics, results_dir)
                 messages.add_pipeline_evaluation(completion, metrics)
-            except Exception as e:
-                with open(f'D:/PhD/LAAFE/results/results_{dataset.name}.txt',
-                          'w') as f:
+                logging.info(
+                    f'Iteration {_ + 1}/{cfg.experiment.num_iterations} metrics: {metrics["accuracy"]}'
+                )
+            except KeyError as e:
+                with open(results_dir / f"results_{dataset.name}.txt", "w") as f:
                     f.write(str(messages))
                     f.write(completion)
-                    f.write(f'{type(e).__name__}, {str(e)}')
-        with open(f'D:/PhD/LAAFE/results/results_{dataset.name}.txt',
-                  'w') as f:
-            f.write(str(messages))
+                    f.write(f"\n{type(e).__name__}, {str(e)}")
+            else:
+                with open(results_dir / f"results_{dataset.name}.txt", "w") as f:
+                    f.write(str(messages))
+            sleep(15)  # to avoid openai api limit
+            # but would be better to use token counter
 
 
-if __name__ == '__main__':
+def run_dataset_description_experiment(cfg):
+    pass
+
+
+@hydra.main(version_base=None, config_path="D:/PhD/LAAFE/", config_name="cfg")
+def main(cfg: DictConfig):
+    run_feature_generation_experiment(cfg)
+
+
+if __name__ == "__main__":
     main()

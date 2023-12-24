@@ -18,18 +18,20 @@ class OpenMLDataset:
     qualities: dict
 
     def __repr__(self):
-        return (f'\nDataset description will be provided further.'
-                f'\nSTART DATASET DESCRIPTION'
-                f'\nDataset name: {self.name}'
-                f'\nDescription:\n{self.description}'
-                f'\nData example:\n{self.data[:5]}'
-                f'\nTarget:\n{self.target[:5]}'
-                f'\nCollection_date: {self.collection_date}'
-                f'\nEND DATASET DESCRIPTION'
-                )
+        return (
+            f"\nDataset description will be provided further."
+            f"\nSTART DATASET DESCRIPTION"
+            f"\nDataset name: {self.name}"
+            # f'\nDescription:\n{self.description}'
+            f"\nData example:\n{self.data[:5]}"
+            f"\nTarget:\n{self.target[:5]}"
+            f"\nCollection_date: {self.collection_date}"
+            f"\nEND DATASET DESCRIPTION"
+        )
 
     def __str__(self):
         return self.__repr__()
+
 
 class DatasetLoader:
     def __init__(self, dataset_ids):
@@ -37,12 +39,14 @@ class DatasetLoader:
 
     @staticmethod
     def load_dataset(dataset_id):
-        dataset = openml.datasets.get_dataset(dataset_id, download_data=True,
-                                              download_qualities=True,
-                                              download_features_meta_data=True)
+        dataset = openml.datasets.get_dataset(
+            dataset_id,
+            download_data=True,
+            download_qualities=True,
+            download_features_meta_data=True,
+        )
         data, target, categorical_indicator, attribute_names = dataset.get_data(
-            dataset_format='dataframe',
-            target=dataset.default_target_attribute
+            dataset_format="dataframe", target=dataset.default_target_attribute
         )
         collection_date = dataset.collection_date
         creator = dataset.creator
@@ -52,9 +56,18 @@ class DatasetLoader:
         language = dataset.language
         name = dataset.name
         qualities = dataset.qualities
-        return OpenMLDataset(data, target, collection_date, creator,
-                             default_target_attribute, description, features,
-                             language, name, qualities)
+        return OpenMLDataset(
+            data,
+            target,
+            collection_date,
+            creator,
+            default_target_attribute,
+            description,
+            features,
+            language,
+            name,
+            qualities,
+        )
 
     def __getitem__(self, item):
         return self.load_dataset(self.dataset_ids[item])
@@ -63,7 +76,7 @@ class DatasetLoader:
         return len(self.dataset_ids)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dataset_loader = DatasetLoader(dataset_ids=[61])
     dataset = dataset_loader[0]
     print(dataset)

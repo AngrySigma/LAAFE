@@ -23,7 +23,6 @@ class MessageHistory:
     def add_pipeline_evaluation(self, pipeline: str, metrics: float):
         self[-2].content += f"\nPipeline: {pipeline}, Metrics: {metrics}"
 
-
     def __str__(self):
         return "\n".join([str(message) for message in self.messages])
 
@@ -39,21 +38,20 @@ class MessageHistory:
     def __iter__(self):
         return iter(self.messages)
 
+
 class ChatBot:
     def __init__(self, api_key, api_organization, model="gpt-3.5-turbo"):
         self.client = OpenAI(api_key=api_key, organization=api_organization)
         self.model = model
 
     def get_completion(
-            self, messages: list[ChatMessage], max_tokens=150, stop=None,
-            temperature=1, n=1
+        self, messages: list[ChatMessage], max_tokens=150, stop=None, temperature=1, n=1
     ):
         """
         Get completion from openai chatbot
         """
         messages = [
-            {"role": message.role, "content": message.content} for message in
-            messages
+            {"role": message.role, "content": message.content} for message in messages
         ]
         response = self.client.chat.completions.create(
             model=self.model,

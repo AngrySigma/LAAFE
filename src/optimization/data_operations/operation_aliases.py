@@ -6,9 +6,8 @@ from dataclasses import dataclass
 
 
 class Operation(ABC):
-    @abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, description=None, *args, **kwargs):
+        self.description = description if description is not None else ""
 
     @abstractmethod
     def __call__(self, df, inp):
@@ -21,6 +20,35 @@ class Operation(ABC):
         return self.description
 
 
+class InplaceOperation(Operation, ABC):
+    def __init__(self, description=None, *args, **kwargs):
+        super().__init__()
+
+    @abstractmethod
+    def __call__(self, df, inp):
+        return df
+
+
+class ReturnOperation(Operation, ABC):
+    def __init__(self, description=None, *args, **kwargs):
+        super().__init__()
+
+    @abstractmethod
+    def __call__(self, df, inp):
+        return df[inp]
+
+
+class Drop(InplaceOperation):
+    def __init__(self):
+        super().__init__()
+        self.description = "Drop input columns inplace"
+
+    def __call__(self, df, inp):
+        df.drop(columns=inp, inplace=True)
+        return df
+
+
+# old
 class Add(Operation):
     def __init__(self):
         super().__init__()
@@ -30,6 +58,7 @@ class Add(Operation):
         return df[inp[0]].add(df[inp[1]])
 
 
+# old
 class Sub(Operation):
     def __init__(self):
         super().__init__()
@@ -39,6 +68,7 @@ class Sub(Operation):
         return df[inp[0]].sub(df[inp[1]])
 
 
+# old
 class Mul(Operation):
     def __init__(self):
         super().__init__()
@@ -48,6 +78,7 @@ class Mul(Operation):
         return df[inp[0]].mul(df[inp[1]])
 
 
+# old
 class Div(Operation):
     def __init__(self):
         super().__init__()
@@ -57,71 +88,87 @@ class Div(Operation):
         return df[inp[0]].div(df[inp[1]])
 
 
-class Pca(Operation):
+class Pca(InplaceOperation):
     def __init__(self):
         super().__init__()
-        self.description = 'PCA on two input columns to a new column "pca"'
+        self.pca = None
+        self.description = "Create new column from PCA on input columns"
 
     def __call__(self, df, inp):
-        return pd.DataFrame(PCA(1).fit_transform(df[inp]))
+        inp = inp if inp else df.columns
+        # if self.pca is None:
+        self.pca = PCA(1)
+        df["pca"] = self.pca.fit_transform(df[inp])
+        # df.drop(columns=inp, inplace=True)
+        return df
+        # df['pca'] = self.pca.transform(df[inp])
+        # df.drop(columns=inp, inplace=True)
+        # return df
+        # TODO: fix pca initialization. now it uses the same pca if not initialized anew each time
 
 
-class Fillna_mean(Operation):
+class FillnaMean(InplaceOperation):
     def __init__(self):
         super().__init__()
-        self.description = 'Fill missing values with mean'
+        self.mean = None
+        self.description = "Fill missing values with mean inplace"
 
     def __call__(self, df, inp=None):
-        if inp is None:
-            return df.fillna(df.mean())
-        return df[inp].fillna(df[inp].mean())
+        inp = inp if inp else df.columns
+        if self.mean is None:
+            self.mean = df[inp].mean()
+        df[inp] = df[inp].fillna(self.mean)
+        return df
 
 
-class Fillna_median(Operation):
+class FillnaMedian(InplaceOperation):
     def __init__(self):
         super().__init__()
-        self.description = 'Fill missing values with median'
+        self.median = None
+        self.description = "Fill missing values with median inplace"
 
     def __call__(self, df, inp=None):
-        if inp is None:
-            return df.fillna(df.median())
-        return df[inp].fillna(df[inp].median())
+        inp = inp if inp else df.columns
+        if self.median is None:
+            self.median = df[inp].median()
+        df[inp] = df[inp].fillna(self.median)
+        return df
 
 
-class Std(Operation):
+class Std(InplaceOperation):
     def __init__(self):
         super().__init__()
-        self.description = 'Standardize input columns'
+        self.scaler = StandardScaler()
+        self.description = "Inplace standard scaling of input columns"
 
     def __call__(self, df, inp=None):
-        if inp is None:
-            return pd.DataFrame(StandardScaler().fit_transform(df),
-                                columns=df.columns)
-        return pd.DataFrame(StandardScaler().fit_transform(df[inp]),
-                            columns=inp)
+        inp = inp if inp else df.columns
+        df[inp] = self.scaler.fit_transform(df[inp])
+        return df
 
 
-class Minmax(Operation):
+class Minmax(InplaceOperation):
     def __init__(self):
         super().__init__()
-        self.description = 'Minmax input columns'
+        self.scaler = MinMaxScaler()
+        self.description = "Inplace minmax scaling of input columns"
 
     def __call__(self, df, inp=None):
-        if inp is None:
-            return pd.DataFrame(MinMaxScaler().fit_transform(df),
-                                columns=df.columns)
-        return pd.DataFrame(MinMaxScaler().fit_transform(df[inp]), columns=inp)
+        inp = inp if inp else df.columns
+        df[inp] = self.scaler.fit_transform(df[inp])
+        return df
 
 
 # operation types: unary, binary, n-ary
 OPERATIONS = {
-    'add': Add(),
-    'sub': Sub(),
-    'mul': Mul(),
-    'div': Div(),
-    'pca': Pca(),
-    'fillna_mean': Fillna_mean(),
-    'fillna_median': Fillna_median(),
-    'std': Std(),
-    'minmax': Minmax(),
+    "add": Add(),
+    "sub": Sub(),
+    "mul": Mul(),
+    "div": Div(),
+    "pca": Pca(),
+    "fillnamean": FillnaMean(),
+    "fillnamedian": FillnaMedian(),
+    "std": Std(),
+    "minmax": Minmax(),
+    "drop": Drop(),
 }
