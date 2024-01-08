@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from catboost import CatBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
 
 
 class Model(ABC):
@@ -26,7 +26,7 @@ class CatboostClassifierModel(Model):
         else:
             self.model = CatBoostClassifier()
 
-    def train(self, data_train, target_train, data_test, target_test) -> list[float]:
+    def train(self, data_train, target_train, data_test, target_test):
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -39,7 +39,7 @@ class LinearClassifierModel(Model):
         else:
             self.model = SGDClassifier()
 
-    def train(self, data_train, target_train, data_test, target_test) -> list[float]:
+    def train(self, data_train, target_train, data_test, target_test):
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -52,7 +52,7 @@ class SVMClassifierModel(Model):
         else:
             self.model = SVC()
 
-    def train(self, data_train, target_train, data_test, target_test) -> list[float]:
+    def train(self, data_train, target_train, data_test, target_test):
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -65,7 +65,7 @@ class RandomForestClassifierModel(Model):
         else:
             self.model = RandomForestClassifier()
 
-    def train(self, data_train, target_train, data_test, target_test) -> list[float]:
+    def train(self, data_train, target_train, data_test, target_test):
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
