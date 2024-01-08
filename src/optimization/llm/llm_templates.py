@@ -1,4 +1,5 @@
 import hydra
+
 from src.optimization.data_operations.operation_aliases import OPERATIONS
 
 
@@ -24,9 +25,10 @@ class LLMTemplate:
             else (
                 "The output in an operation pipeline in following format:"
                 "\nSTART FORMAT DESCRIPTION"
-                '\n"operation1(df_column) , operation2(df_column) , operationN(df_column)"'
+                '\n"operation1(df_column) , operation2(df_column_1, df_column_2) , operationN()"'
+                "\nwhere empty brackets mean that operation is applied to all columns of the dataset."
+                "\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
                 "\nEND FORMAT DESCRIPTION"
-                "\nPlease, don't use spaces between operations and inputs. Name operation exactly as they are listed in initial message. Do not add any other information to the output."
             )
         )
         self.operators = []
@@ -41,7 +43,7 @@ class LLMTemplate:
         self.previous_evaluations = (
             previous_evaluations
             if (previous_evaluations is not None)
-            else ("Previous pipeline evaluations and corresponding metrics:")
+            else ("Previous pipeline evaluations and corresponding metrics:\n")
         )
 
     def _add_operators(self, operators):
@@ -52,7 +54,7 @@ class LLMTemplate:
         template += self.output_format + "\n"
         template += "Available data operations are the following:\n"
         for operator in self.operators:
-            template += f"\t{operator.__class__.__name__}: {operator.description}\n"
+            template += f"\t{operator.__name__}: {operator.description()}\n"
         template += self.instruction + "\n"
         return template
 

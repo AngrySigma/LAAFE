@@ -1,6 +1,6 @@
-import openml
 from dataclasses import dataclass
 
+import openml
 import pandas as pd
 
 
@@ -19,14 +19,14 @@ class OpenMLDataset:
 
     def __repr__(self):
         return (
-            f"\nDataset description will be provided further."
+            f"Dataset description will be provided further."
             f"\nSTART DATASET DESCRIPTION"
             f"\nDataset name: {self.name}"
-            # f'\nDescription:\n{self.description}'
+            f"\nDescription:\n{self.description}"
             f"\nData example:\n{self.data[:5]}"
             f"\nTarget:\n{self.target[:5]}"
             f"\nCollection_date: {self.collection_date}"
-            f"\nEND DATASET DESCRIPTION"
+            f"\nEND DATASET DESCRIPTION\n"
         )
 
     def __str__(self):
