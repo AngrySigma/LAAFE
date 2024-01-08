@@ -1,31 +1,28 @@
-import os
-from pathlib import Path
 import logging
-
-from sklearn.linear_model import LinearRegression
-from sklearn.svm import SVC
-from time import sleep
+import os
 import time
+from pathlib import Path
+from time import sleep
+
 import hydra
-from tqdm import tqdm, trange
-from omegaconf import DictConfig
-from src.optimization.data_operations.dataset_loaders import DatasetLoader
-from src.optimization.data_operations.operation_pipeline import (
-    parse_data_operation_pipeline,
-    apply_pipeline,
-)
-from src.optimization.llm.llm_templates import LLMTemplate
-from src.optimization.llm.gpt import ChatBot, ChatMessage, MessageHistory
-from fedot.api.main import Fedot
-from sklearn.model_selection import train_test_split
 import numpy as np
 from catboost import CatBoostClassifier
+from fedot.api.main import Fedot
+from omegaconf import DictConfig
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from tqdm import tqdm, trange
+
+from src.optimization import MODELS
+from src.optimization.data_operations.dataset_loaders import DatasetLoader
+from src.optimization.data_operations.operation_pipeline import (
+    apply_pipeline, parse_data_operation_pipeline)
+from src.optimization.llm.gpt import ChatBot, ChatMessage, MessageHistory
+from src.optimization.llm.llm_templates import LLMTemplate
 from src.optimization.models.model_training import (
-    CatboostClassifierModel,
-    LinearClassifierModel,
-    SVMClassifierModel,
-    RandomForestClassifierModel,
-)
+    CatboostClassifierModel, LinearClassifierModel,
+    RandomForestClassifierModel, SVMClassifierModel)
 
 np.random.seed(42)
 
@@ -51,9 +48,9 @@ def run_feature_generation_experiment(cfg):
         model=cfg.llm.gpt.model_name,
     )
     llm_template = LLMTemplate(operators=cfg.llm.operators)
-    model = RandomForestClassifierModel
+    model = MODELS[cfg.model_type]
 
-    dataset_ids = cfg[cfg.problem_type].datasets[:3]  # take first dataset for now
+    dataset_ids = cfg[cfg.problem_type].datasets[:1]  # take first dataset for now
     dataset_loader = DatasetLoader(dataset_ids=dataset_ids)
     counter = 1
     for dataset in dataset_loader:
@@ -77,8 +74,8 @@ def run_feature_generation_experiment(cfg):
 
         for _ in range(cfg.experiment.num_iterations):
             np.random.seed(42)
-            completion = chatbot.get_completion(messages=messages)
-            # completion = 'std(V1), fillna_median(V2), std(V3), fillna_mean(V4)'
+            # completion = chatbot.get_completion(messages=messages)
+            completion = "std(V1), fillna_median(V2), std(V3), fillna_mean(V4)"
             try:
                 pipeline = parse_data_operation_pipeline(completion)
                 dataset_mod = dataset.data.copy()
