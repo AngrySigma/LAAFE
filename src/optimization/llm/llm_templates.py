@@ -25,7 +25,10 @@ class LLMTemplate:
             else (
                 "The output in an operation pipeline in following format:"
                 "\nSTART FORMAT DESCRIPTION"
-                '\n"operation1(df_column) , operation2(df_column_1, df_column_2) , operationN()"'
+                # '\n"operation1(df_column) , operation2(df_column_1, df_column_2) , operationN()"'
+                '\n\toperation1(df_column)'
+                '\n\toperation2(df_column_1, df_column_2)'
+                '\n\toperationN()'
                 "\nwhere empty brackets mean that operation is applied to all columns of the dataset."
                 "\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
                 "\nEND FORMAT DESCRIPTION"
