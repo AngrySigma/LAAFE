@@ -1,0 +1,41 @@
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+
+[tool.pylint.MASTER]
+ignore = []
+extension-pkg-whitelist = ['numpy', 'pandas']
+disable = [
+    'C0114', # Missing module docstring
+    'C0115', # Missing class docstring
+    'C0116', # Missing function or method docstring
+    'W0621', # Redefining name %r from outer scope (line %s)
+]
+
+[tool.pylint.BASIC]
+class-rgx = '[a-zA-Z_][a-zA-Z0-9_]{2,30}$'
+
+[tool.pylint.FORMAT]
+max-line-length = 88
+max-attributes = 30
+max-public-methods = 30
+max-args = 15
+max-locals = 25
+max-branches = 20
+min-public-methods = 0
+variable-rgx = ["(.*[a-z][a-z0-9_]{1,30}|[a-z_])$"]
+argument-rgx = ["(.*[a-z][a-z0-9_]{1,30}|[a-z_])$"]
+attr-rgx = ["(.*[a-z][a-z0-9_]{1,30}|[a-z_])$"]
+
+[tool.pylint.SIMILARITIES]
+ignore-imports = "yes"
+ignore-signatures = "yes"
+
+min-similarity-lines = 7
