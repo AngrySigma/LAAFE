@@ -4,8 +4,14 @@ from collections import OrderedDict
 import networkx as nx
 import pandas as pd
 from matplotlib import pyplot as plt
+from pandas.core.dtypes.common import is_numeric_dtype
 
-from src.optimization.data_operations.operation_aliases import OPERATIONS
+from src.optimization.data_operations import OPERATIONS
+from src.optimization.data_operations.operation_aliases import (
+    Drop,
+    FillnaMean,
+    LabelEncoding,
+)
 
 
 # TODO: add unary, binary, n-ary operations and in-place operations
@@ -39,13 +45,32 @@ class OperationPipeline:
     def __init__(self, operations):
         self.operations_pipeline = []
         self.operations = operations
+        self.errors = None
 
     def add_operation(self, operation, inp=None):
-        self.operations_pipeline.append(operation(inp))
+        self.operations_pipeline.append(operation(inp if inp else None))
+
+    # def validate(self, df):
+    #     for i in range(len(self.operations_pipeline)):
+    #         try:
+    #             self.operations_pipeline[i].fit_transform(df)
+    #         except KeyError:
+    #             self.operations_pipeline.pop(i)
 
     def fit_transform(self, df):
+        drop_operations = []
+        self.errors = []
         for operation in self.operations_pipeline:
-            df = operation.fit_transform(df)
+            try:
+                df = operation.fit_transform(df)
+            except (KeyError, ValueError) as e:
+                drop_operations.append(operation)
+                self.errors.append(
+                    f"{operation.__class__.__name__}{e.__class__.__name__}: {e}"
+                )
+        for operation in drop_operations:
+            self.operations_pipeline.remove(operation)
+            # TODO: here too add some LLM invocation to fix the error
         return df
 
     def transform(self, df):
@@ -54,24 +79,68 @@ class OperationPipeline:
         return df
 
     def parse_pipeline(self, prompt):
-        operations_pipeline = [operation.strip('\w)').split('(') for operation in
-                      prompt.strip().split('\n')]
-        operations_pipeline = {
-            self.operations[re.sub("[_-]", "", operation[0].lower())]: operation[1].split(',')
-            for operation in operations_pipeline}
-        for operation, inp in operations_pipeline.items():
-            self.add_operation(operation, inp)
+        operations_pipeline = [
+            operation.strip("\w)").split("(")
+            for operation in prompt.strip().split("\n")
+        ]
+        operations_pipeline = [
+            (
+                self.operations[re.sub("[_-]", "", operation[0].lower())],
+                operation[1].lower().replace(" ", "").split(","),
+            )
+            for operation in operations_pipeline
+        ]
+        for operation, inp in operations_pipeline:
+            self.add_operation(operation, inp if inp != [""] else None)
 
     def draw_pipeline(self):
         graph = nx.DiGraph()
-        operation_names = ['\n'.join([operation.__class__.__name__] + operation.inp) for operation in self.operations_pipeline]
+        operation_names = [
+            "\n".join([operation.__class__.__name__] + operation.inp)
+            for operation in self.operations_pipeline
+        ]
         # convert list to list of pairs
         operation_names = list(zip(operation_names, operation_names[1:]))
         graph.add_edges_from(operation_names)
 
-        nx.draw_spectral(graph, with_labels=True, font_weight='bold', node_size=1000, font_size=10)
+        nx.draw_spectral(
+            graph, with_labels=True, font_weight="bold", node_size=1000, font_size=10
+        )
         return graph
 
+    # def build_default_pipeline(self, df):
+    #     for column in df.columns:
+    #         if is_numeric_dtype(df[column]):
+    #             self.add_operation(FillnaMean, [column])
+    #         else:
+    #             if df[column].nunique() < 10:
+    #                 self.add_operation(LabelEncoding, [column])
+    #                 self.add_operation(FillnaMean, [column])
+    #             else:
+    #                 self.add_operation(Drop, [column])
+    #     return None
+
+    def build_default_pipeline(self, df):
+        for column in df.columns:
+            if is_numeric_dtype(df[column]):
+                self.add_operation(FillnaMean, [column])
+            else:
+                if df[column].dtype.name == "object" and df[column].nunique() < 10:
+                    self.add_operation(LabelEncoding, [column])
+                else:
+                    self.add_operation(Drop, [column])
+        return None
+
+    def __str__(self):
+        try:
+            return "\n\t".join(
+                [
+                    operation.__class__.__name__ + "(" + ",".join(operation.inp) + ")"
+                    for operation in self.operations_pipeline
+                ]
+            )
+        except TypeError as e:
+            pass
 
 
 if __name__ == "__main__":
@@ -86,19 +155,20 @@ if __name__ == "__main__":
     #                                     parsed_data_operation_pipeline[
     #                                         operation])
     # test_data = apply_pipeline(test_data, parsed_data_operation_pipeline)
-    prompt = ('fillna_mean(b)\n'
-              'pca(b)\n'
-              'drop(a)\n'
-                'std(b)\n'
-                'minmax(pca_0)\n'
-                'onehotencoding(pca_0)\n')
-
-
+    prompt = (
+        "fillna_mean(b)\n"
+        "pca(b)\n"
+        "drop(a)\n"
+        "std(b)\n"
+        "minmax()\n"
+        "onehotencoding(pca_0, b)\n"
+    )
 
     operation_pipeline = OperationPipeline(OPERATIONS)
     operation_pipeline.parse_pipeline(prompt)
     test_data = operation_pipeline.fit_transform(test_data)
     operation_pipeline.draw_pipeline()
+    plt.savefig("D:/TEMP/pipeline.png")
     plt.show()
     print(test_data)
     # print(operation_pipeline.transform(pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 2, 3, 4, 5]})))

@@ -5,6 +5,7 @@ from pathlib import Path
 from time import sleep
 
 import hydra
+import matplotlib.pyplot as plt
 import numpy as np
 from catboost import CatBoostClassifier
 from fedot.api.main import Fedot
@@ -15,14 +16,21 @@ from sklearn.svm import SVC
 from tqdm import tqdm, trange
 
 from src.optimization import MODELS
+from src.optimization.data_operations import OPERATIONS
 from src.optimization.data_operations.dataset_loaders import DatasetLoader
 from src.optimization.data_operations.operation_pipeline import (
-    apply_pipeline, parse_data_operation_pipeline)
+    OperationPipeline,
+    apply_pipeline,
+    parse_data_operation_pipeline,
+)
 from src.optimization.llm.gpt import ChatBot, ChatMessage, MessageHistory
 from src.optimization.llm.llm_templates import LLMTemplate
 from src.optimization.models.model_training import (
-    CatboostClassifierModel, LinearClassifierModel,
-    RandomForestClassifierModel, SVMClassifierModel)
+    CatboostClassifierModel,
+    LinearClassifierModel,
+    RandomForestClassifierModel,
+    SVMClassifierModel,
+)
 
 np.random.seed(42)
 
@@ -50,58 +58,104 @@ def run_feature_generation_experiment(cfg):
     llm_template = LLMTemplate(operators=cfg.llm.operators)
     model = MODELS[cfg.model_type]
 
-    dataset_ids = cfg[cfg.problem_type].datasets[:1]  # take first dataset for now
+    dataset_ids = cfg[cfg.problem_type].datasets  # take first dataset for now
     dataset_loader = DatasetLoader(dataset_ids=dataset_ids)
     counter = 1
     for dataset in dataset_loader:
+        dataset_dir = results_dir / dataset.name
+        os.makedirs(dataset_dir)
         logging.info(f"Processing dataset {1}/{len(dataset_loader)}: {dataset.name}")
         counter += 1
         np.random.seed(42)
         write_dataset_name(dataset.name, results_dir)
+        operations_pipeline = OperationPipeline(OPERATIONS)
+
         data_train, data_test, target_train, target_test = train_test_split(
-            np.array(dataset.data), np.array(dataset.target), test_size=0.2
+            dataset.data.copy(), dataset.target.copy(), test_size=0.2
         )
+        operations_pipeline.build_default_pipeline(data_train)
+        plt.close()
+        operations_pipeline.draw_pipeline()
+        plt.savefig(dataset_dir / f"pipeline_0.png")
+        data_train = operations_pipeline.fit_transform(data_train)
+        data_test = operations_pipeline.transform(data_test)
+
         metrics = model().train(data_train, target_train, data_test, target_test)
         write_model_evaluation(metrics, results_dir)
         logging.info(f'Initial 0: {metrics["accuracy"]}')
 
-        messages = MessageHistory()
-        messages.add_message(llm_template.initial_template())
-        messages.add_message(str(dataset))
-        messages.add_message(llm_template.previous_evaluations_template())
-        messages.add_message(llm_template.instruction_template())
-        messages.add_pipeline_evaluation("Initial evaluation", metrics)
+        llm_template.messages.append(llm_template.initial_template())
+        llm_template.messages.append(str(dataset))
+        llm_template.messages.append(llm_template.previous_evaluations_template())
+        llm_template.messages.append(llm_template.instruction_template())
+        llm_template.messages[
+            -2
+        ] += f"\nInitial evaluation: {metrics['accuracy']}, Pipeline: \n\t{operations_pipeline}"
 
-        for _ in range(cfg.experiment.num_iterations):
+        for iteration in range(cfg.experiment.num_iterations):
             np.random.seed(42)
-            # completion = chatbot.get_completion(messages=messages)
-            completion = "std(V1), fillna_median(V2), std(V3), fillna_mean(V4)"
-            try:
-                pipeline = parse_data_operation_pipeline(completion)
-                dataset_mod = dataset.data.copy()
-                dataset_mod = apply_pipeline(dataset_mod, pipeline)
+            message = ChatMessage("".join(llm_template.messages))
+            # completion = chatbot.get_completion(messages=message)
+            completion = ('FillnaMean(pclass)\n'
+                          'Drop(name)\n'
+                          'LabelEncoding(sex)\n'
+                          'FillnaMean(sex)\n'
+                          'FillnaMean(age)\n'
+                          'FillnaMean(sibsp)\n'
+                          'FillnaMean(parch)\n'
+                          'Drop(ticket)\n'
+                          'FillnaMean(fare)\n'
+                          'Binning(fare)\n'
+                          'FillnaMean(fare)\n'
+                          'Pca(test)\n'
+                          'PCA(test)\n'
+                          'Drop(cabin)\n'
+                          'LabelEncoding(embarked)\n'
+                          'FillnaMean(embarked)\n'
+                          'Drop(boat)\n'
+                          'FillnaMean(body)\n'
+                          'Drop(home.dest)\n')
 
+            try:
                 data_train, data_test, target_train, target_test = train_test_split(
-                    np.array(dataset_mod), np.array(dataset.target), test_size=0.2
+                    dataset.data.copy(), dataset.target.copy(), test_size=0.2
                 )
-                # TODO: fix data leak
+
+                operations_pipeline = OperationPipeline(OPERATIONS)
+                operations_pipeline.parse_pipeline(completion)
+                pipeline_str = str(operations_pipeline)
+                operations_pipeline.fit_transform(data_train)
+                operations_pipeline.transform(data_test)
+                plt.close()
+                operations_pipeline.draw_pipeline()
+                plt.savefig(dataset_dir / f"pipeline_{iteration + 1}.png")
 
                 metrics = model(random_state=42).train(
                     data_train, target_train, data_test, target_test
                 )
                 write_model_evaluation(metrics, results_dir)
-                messages.add_pipeline_evaluation(completion, metrics)
+                llm_template.messages[
+                    -2
+                ] += f"\nIteration {iteration + 1}: {metrics['accuracy']}, Pipeline: \n{pipeline_str}"
+                if operations_pipeline.errors:
+                    error_msg = "\n".join(operations_pipeline.errors)
+                    llm_template.messages[-2] += f"\nErrors: {error_msg}\n"
+                # TODO: tab is wrong here. 2 tabs make it even worse
                 logging.info(
-                    f'Iteration {_ + 1}/{cfg.experiment.num_iterations} metrics: {metrics["accuracy"]}'
+                    f'Iteration {iteration + 1}/{cfg.experiment.num_iterations} metrics: {metrics["accuracy"]}'
                 )
             except KeyError as e:
-                with open(results_dir / f"results_{dataset.name}.txt", "w") as f:
-                    f.write(str(messages))
-                    f.write(completion)
+                with open(
+                    dataset_dir / f"prompt_result.txt", "w", encoding="utf-8"
+                ) as f:
+                    f.write("\n".join(llm_template.messages))
+                    f.write("\nCompletion:" + completion + "\n")
                     f.write(f"\n{type(e).__name__}, {str(e)}")
             else:
-                with open(results_dir / f"results_{dataset.name}.txt", "w") as f:
-                    f.write(str(messages))
+                with open(
+                    dataset_dir / f"prompt_result.txt", "w", encoding="utf-8"
+                ) as f:
+                    f.write("\n".join(llm_template.messages))
             sleep(15)  # to avoid openai api limit
             # but would be better to use token counter
 
@@ -110,7 +164,7 @@ def run_dataset_description_experiment(cfg):
     pass
 
 
-@hydra.main(version_base=None, config_path="D:/PhD/LAAFE/", config_name="cfg")
+@hydra.main(version_base=None, config_path="D:/PhD/LAAFE/cfg", config_name="cfg")
 def main(cfg: DictConfig):
     run_feature_generation_experiment(cfg)
 
