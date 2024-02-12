@@ -26,7 +26,7 @@ class OpenMLDataset:
             f"\nData example:\n{self.data[:5]}"
             f"\nTarget:\n{self.target[:5]}"
             f"\nCollection_date: {self.collection_date}"
-            f"\nEND DATASET DESCRIPTION\n"
+            f"\nEND DATASET DESCRIPTION"
         )
 
     def __str__(self):

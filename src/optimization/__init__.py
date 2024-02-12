@@ -1,6 +1,9 @@
 from src.optimization.models.model_training import (
-    CatboostClassifierModel, LinearClassifierModel,
-    RandomForestClassifierModel, SVMClassifierModel)
+    CatboostClassifierModel,
+    LinearClassifierModel,
+    RandomForestClassifierModel,
+    SVMClassifierModel,
+)
 
 MODELS = {
     "catboost_classifier": CatboostClassifierModel,
