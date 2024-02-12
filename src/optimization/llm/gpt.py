@@ -45,11 +45,17 @@ class ChatBot:
         self.model = model
 
     def get_completion(
-        self, messages: list[ChatMessage], max_tokens=150, stop=None, temperature=1, n=1
+        self,
+        messages: ChatMessage | list[ChatMessage],
+        max_tokens=150,
+        stop=None,
+        temperature=1,
+        n=1,
     ):
         """
         Get completion from openai chatbot
         """
+        messages = [messages] if isinstance(messages, ChatMessage) else messages
         messages = [
             {"role": message.role, "content": message.content} for message in messages
         ]

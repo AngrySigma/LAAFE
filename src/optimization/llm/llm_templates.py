@@ -1,6 +1,6 @@
 import hydra
 
-from src.optimization.data_operations.operation_aliases import OPERATIONS
+from src.optimization.data_operations import OPERATIONS
 
 
 class LLMTemplate:
@@ -23,15 +23,15 @@ class LLMTemplate:
             output_format
             if (output_format is not None)
             else (
-                "The output in an operation pipeline in following format:"
-                "\nSTART FORMAT DESCRIPTION"
+                "The output is an operation pipeline written as in PIPELINE EXAMPLE:"
+                # "\nSTART PIPELINE EXAMPLE (do not include this string in answer)"
                 # '\n"operation1(df_column) , operation2(df_column_1, df_column_2) , operationN()"'
-                '\n\toperation1(df_column)'
-                '\n\toperation2(df_column_1, df_column_2)'
-                '\n\toperationN()'
-                "\nwhere empty brackets mean that operation is applied to all columns of the dataset."
+                "\n\toperation1(df_column)"
+                "\n\toperation2(df_column_1, df_column_2)"
+                "\n\toperationN()"
+                # "\nEND PIPELINE EXAMPLE"
+                "\nEmpty brackets mean that operation is applied to all columns of the dataset."
                 "\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
-                "\nEND FORMAT DESCRIPTION"
             )
         )
         self.operators = []
@@ -46,8 +46,9 @@ class LLMTemplate:
         self.previous_evaluations = (
             previous_evaluations
             if (previous_evaluations is not None)
-            else ("Previous pipeline evaluations and corresponding metrics:\n")
+            else ("Previous pipeline evaluations and corresponding metrics:")
         )
+        self.messages = []
 
     def _add_operators(self, operators):
         self.operators += [OPERATIONS[operator] for operator in operators]
@@ -58,11 +59,11 @@ class LLMTemplate:
         template += "Available data operations are the following:\n"
         for operator in self.operators:
             template += f"\t{operator.__name__}: {operator.description()}\n"
-        template += self.instruction + "\n"
+        template += self.instruction
         return template
 
     def instruction_template(self):
-        template = self.instruction + "\n"
+        template = self.instruction
         return template
 
     def previous_evaluations_template(self):
@@ -70,7 +71,7 @@ class LLMTemplate:
         return template
 
     def __str__(self):
-        return self.initial_template()
+        return "\n".join(self.messages)
 
 
 @hydra.main(
