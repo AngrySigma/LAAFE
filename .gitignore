@@ -165,6 +165,6 @@ outputs/
 notebooks/
 data/
 
-*cfg.yaml
+cfg/cfg.yaml
 *ipynb
 results/
