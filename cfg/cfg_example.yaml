@@ -1,4 +1,6 @@
 problem_type: "classification"
+model_type: "random_forest_classifier"
+# choice from catboost_classifier, linear_classifier, svm_classifier, random_forest_classifier
 classification:
   metrics:
     - "accuracy"
@@ -7,8 +9,10 @@ classification:
     - "recall"
     - "roc_auc"
   datasets:
+    - 40945
     - 31
     - 1464
+    - 1504
     - 334
     - 50
 
@@ -25,18 +29,20 @@ regression:
     - 210
     - 560
 llm:
+  operation_split: "->"
   operators:
-    - "add"
-    - "sub"
-    - "mul"
-    - "div"
     - "pca"
-    - "fillna_mean"
-    - "fillna_median"
+    - "fillnamean"
+    - "fillnamedian"
     - "std"
     - "minmax"
-
+    - "drop"
+    - "binning"
+    - "labelencoding"
+    - "onehotencoding"
   gpt:
-    openai_api_organization: "org-arst"
-    openai_api_key: "sk-arst"
+    openai_api_organization: "org-{your_org_id}"
+    openai_api_key: "sk-{your_key}"
     model_name: "gpt-3.5-turbo"
+experiment:
+  num_iterations: 5

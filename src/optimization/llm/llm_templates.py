@@ -27,8 +27,8 @@ class LLMTemplate:
                 # "\nSTART PIPELINE EXAMPLE (do not include this string in answer)"
                 # '\n"operation1(df_column) , operation2(df_column_1, df_column_2) , operationN()"'
                 "\n\toperation1(df_column)"
-                "\n\toperation2(df_column_1, df_column_2)"
-                "\n\toperationN()"
+                "->operation2(df_column_1, df_column_2)"
+                "->operationN()"
                 # "\nEND PIPELINE EXAMPLE"
                 "\nEmpty brackets mean that operation is applied to all columns of the dataset."
                 "\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
@@ -83,4 +83,4 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # ignore: E1120

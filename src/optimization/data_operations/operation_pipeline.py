@@ -14,7 +14,6 @@ from src.optimization.data_operations.operation_aliases import (
 )
 
 
-# TODO: add unary, binary, n-ary operations and in-place operations
 def parse_data_operation_pipeline(data_operation_pipeline):
     parsed_data_operation_pipeline = []
     operations = re.findall(r"[a-zA-Z_]*\(.*?\)", data_operation_pipeline)
@@ -42,20 +41,14 @@ def apply_pipeline(df, parsed_data_operation_pipeline):
 
 
 class OperationPipeline:
-    def __init__(self, operations):
+    def __init__(self, operations, split_by="\n"):
         self.operations_pipeline = []
         self.operations = operations
         self.errors = None
+        self.split_by = split_by
 
     def add_operation(self, operation, inp=None):
         self.operations_pipeline.append(operation(inp if inp else None))
-
-    # def validate(self, df):
-    #     for i in range(len(self.operations_pipeline)):
-    #         try:
-    #             self.operations_pipeline[i].fit_transform(df)
-    #         except KeyError:
-    #             self.operations_pipeline.pop(i)
 
     def fit_transform(self, df):
         drop_operations = []
@@ -81,7 +74,7 @@ class OperationPipeline:
     def parse_pipeline(self, prompt):
         operations_pipeline = [
             operation.strip("\w)").split("(")
-            for operation in prompt.strip().split("\n")
+            for operation in prompt.strip().split(self.split_by)
         ]
         operations_pipeline = [
             (
@@ -108,17 +101,6 @@ class OperationPipeline:
         )
         return graph
 
-    # def build_default_pipeline(self, df):
-    #     for column in df.columns:
-    #         if is_numeric_dtype(df[column]):
-    #             self.add_operation(FillnaMean, [column])
-    #         else:
-    #             if df[column].nunique() < 10:
-    #                 self.add_operation(LabelEncoding, [column])
-    #                 self.add_operation(FillnaMean, [column])
-    #             else:
-    #                 self.add_operation(Drop, [column])
-    #     return None
 
     def build_default_pipeline(self, df):
         for column in df.columns:
@@ -133,7 +115,7 @@ class OperationPipeline:
 
     def __str__(self):
         try:
-            return "\n\t".join(
+            return self.split_by.join(
                 [
                     operation.__class__.__name__ + "(" + ",".join(operation.inp) + ")"
                     for operation in self.operations_pipeline

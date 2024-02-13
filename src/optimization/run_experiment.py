@@ -68,7 +68,9 @@ def run_feature_generation_experiment(cfg):
         counter += 1
         np.random.seed(42)
         write_dataset_name(dataset.name, results_dir)
-        operations_pipeline = OperationPipeline(OPERATIONS)
+        operations_pipeline = OperationPipeline(
+            OPERATIONS, split_by=cfg.llm.operation_split
+        )
 
         data_train, data_test, target_train, target_test = train_test_split(
             dataset.data.copy(), dataset.target.copy(), test_size=0.2
@@ -88,40 +90,42 @@ def run_feature_generation_experiment(cfg):
         llm_template.messages.append(str(dataset))
         llm_template.messages.append(llm_template.previous_evaluations_template())
         llm_template.messages.append(llm_template.instruction_template())
-        llm_template.messages[
-            -2
-        ] += f"\nInitial evaluation: {metrics['accuracy']}, Pipeline: \n\t{operations_pipeline}"
+        llm_template.messages[-2] += (
+            f"\nInitial evaluation: {metrics['accuracy']}, "
+            f"Pipeline: {operations_pipeline}"
+        )
 
         for iteration in range(cfg.experiment.num_iterations):
             np.random.seed(42)
             message = ChatMessage("".join(llm_template.messages))
-            # completion = chatbot.get_completion(messages=message)
-            completion = ('FillnaMean(pclass)\n'
-                          'Drop(name)\n'
-                          'LabelEncoding(sex)\n'
-                          'FillnaMean(sex)\n'
-                          'FillnaMean(age)\n'
-                          'FillnaMean(sibsp)\n'
-                          'FillnaMean(parch)\n'
-                          'Drop(ticket)\n'
-                          'FillnaMean(fare)\n'
-                          'Binning(fare)\n'
-                          'FillnaMean(fare)\n'
-                          'Pca(test)\n'
-                          'PCA(test)\n'
-                          'Drop(cabin)\n'
-                          'LabelEncoding(embarked)\n'
-                          'FillnaMean(embarked)\n'
-                          'Drop(boat)\n'
-                          'FillnaMean(body)\n'
-                          'Drop(home.dest)\n')
+            completion = chatbot.get_completion(messages=message)
+            # completion = cfg.llm.operation_split.join(('FillnaMean(pclass)',
+            #               'Drop(name)',
+            #               'LabelEncoding(sex)',
+            #               'FillnaMean(sex)',
+            #               'FillnaMean(age)',
+            #               'FillnaMean(sibsp)',
+            #               'FillnaMean(parch)',
+            #               'Drop(ticket)',
+            #               'FillnaMean(fare)',
+            #               'Binning(fare)',
+            #               'FillnaMean(fare)',
+            #               'Pca(test)',
+            #               'Drop(cabin)',
+            #               'LabelEncoding(embarked)',
+            #               'FillnaMean(embarked)',
+            #               'Drop(boat)',
+            #               'FillnaMean(body)',
+            #               'Drop(home.dest)',))
 
             try:
                 data_train, data_test, target_train, target_test = train_test_split(
                     dataset.data.copy(), dataset.target.copy(), test_size=0.2
                 )
 
-                operations_pipeline = OperationPipeline(OPERATIONS)
+                operations_pipeline = OperationPipeline(
+                    OPERATIONS, split_by=cfg.llm.operation_split
+                )
                 operations_pipeline.parse_pipeline(completion)
                 pipeline_str = str(operations_pipeline)
                 operations_pipeline.fit_transform(data_train)
@@ -134,26 +138,28 @@ def run_feature_generation_experiment(cfg):
                     data_train, target_train, data_test, target_test
                 )
                 write_model_evaluation(metrics, results_dir)
-                llm_template.messages[
-                    -2
-                ] += f"\nIteration {iteration + 1}: {metrics['accuracy']}, Pipeline: \n{pipeline_str}"
+                llm_template.messages[-2] += (
+                    f"\nIteration {iteration + 1}: {metrics['accuracy']}, "
+                    f"Pipeline: \n{pipeline_str}"
+                )
                 if operations_pipeline.errors:
                     error_msg = "\n".join(operations_pipeline.errors)
                     llm_template.messages[-2] += f"\nErrors: {error_msg}\n"
-                # TODO: tab is wrong here. 2 tabs make it even worse
                 logging.info(
-                    f'Iteration {iteration + 1}/{cfg.experiment.num_iterations} metrics: {metrics["accuracy"]}'
+                    f"Iteration {iteration + 1}/"
+                    f"{cfg.experiment.num_iterations} "
+                    f'metrics: {metrics["accuracy"]}'
                 )
             except KeyError as e:
                 with open(
-                    dataset_dir / f"prompt_result.txt", "w", encoding="utf-8"
+                    dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
                 ) as f:
                     f.write("\n".join(llm_template.messages))
                     f.write("\nCompletion:" + completion + "\n")
                     f.write(f"\n{type(e).__name__}, {str(e)}")
             else:
                 with open(
-                    dataset_dir / f"prompt_result.txt", "w", encoding="utf-8"
+                    dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
                 ) as f:
                     f.write("\n".join(llm_template.messages))
             sleep(15)  # to avoid openai api limit
