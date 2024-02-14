@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 
 
 class Operation(ABC):
-    def __init__(self, inp=None, *args, **kwargs):
+    def __init__(self, inp=None):
         self.inp = [inp] if isinstance(inp, str) else inp
 
     @abstractmethod
@@ -35,9 +35,6 @@ class Operation(ABC):
 
 # TODO: check this. Unnecessary, can be deleted
 class InplaceOperation(Operation, ABC):
-    def __init__(self, inp=None, *args, **kwargs):
-        super().__init__(inp, *args, **kwargs)
-
     @abstractmethod
     def __call__(self, df) -> None:
         pass
@@ -45,7 +42,7 @@ class InplaceOperation(Operation, ABC):
 
 # TODO: update this
 class ReturnOperation(Operation, ABC):
-    def __init__(self, inp=None, *args, **kwargs):
+    def __init__(self, *args, inp=None, **kwargs):
         super().__init__(inp, *args, **kwargs)
 
     @abstractmethod

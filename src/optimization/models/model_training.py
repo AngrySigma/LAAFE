@@ -12,8 +12,13 @@ from src.optimization.data_operations.operation_pipeline import OperationPipelin
 
 class Model(ABC):
     @abstractmethod
-    def __init__(self, random_state: Optional[int | float] = None) -> None:
-        pass
+    def __init__(
+        self,
+        random_state: Optional[int | float] = None,
+        pipeline: Optional[OperationPipeline] = None,
+    ) -> None:
+        self.random_state = random_state
+        self.pipeline = pipeline
 
     @abstractmethod
     def train(
@@ -62,11 +67,15 @@ class SVMClassifierModel(Model):
 
 
 class RandomForestClassifierModel(Model):
-    def __init__(self, random_state: Optional[int | float] = None) -> None:
-        if random_state is not None:
-            self.model = RandomForestClassifier(random_state=random_state)
-        else:
-            self.model = RandomForestClassifier()
+    def __init__(
+        self,
+        random_state: Optional[int | float] = None,
+        pipeline: Optional[OperationPipeline] = None,
+    ) -> None:
+        super().__init__(random_state, pipeline=pipeline)
+        self.model = RandomForestClassifier(
+            random_state=random_state if random_state is not None else None
+        )
 
     def train(self, data_train, target_train, data_test, target_test):
         err = False
@@ -78,14 +87,16 @@ class RandomForestClassifierModel(Model):
             # backup_pipeline.build_default_pipeline(data_train)
             # backup_pipeline.fit_transform(data_train)
             # backup_pipeline.transform(data_test)
-            # self.model.fit(data_train, target_train)
-            # metrics = self.model.score(data_test, target_test)
-            metrics = 0
+            self.pipeline.build_default_pipeline(data_train)
+            self.pipeline.fit_transform(data_train)
+            self.pipeline.transform(data_test)
+
+            self.model.fit(data_train, target_train)
+            metrics = self.model.score(data_test, target_test)
             err = e
-        # metrics = f'ValueError: {e}'
         # TODO: we can invoke next request for the LLM to fix the error
         return {
             "accuracy": metrics
-            if not err
-            else f"{metrics}, {err.__class__.__name__}: {err}"
+            # if not err
+            # else f"{metrics}, {err.__class__.__name__}: {err}"
         }

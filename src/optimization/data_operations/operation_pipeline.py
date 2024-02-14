@@ -1,5 +1,6 @@
 import re
 from collections import OrderedDict
+from copy import deepcopy
 
 import networkx as nx
 import pandas as pd
@@ -50,20 +51,36 @@ class OperationPipeline:
     def add_operation(self, operation, inp=None):
         self.operations_pipeline.append(operation(inp if inp else None))
 
-    def fit_transform(self, df):
+    def validate_pipeline(self, df):
+        test_df = deepcopy(df)
         drop_operations = []
-        self.errors = []
+        error_flag = False
         for operation in self.operations_pipeline:
             try:
-                df = operation.fit_transform(df)
+                test_df = operation.fit_transform(test_df)
             except (KeyError, ValueError) as e:
                 drop_operations.append(operation)
-                self.errors.append(
-                    f"{operation.__class__.__name__}{e.__class__.__name__}: {e}"
-                )
+                error_flag = True
+
         for operation in drop_operations:
             self.operations_pipeline.remove(operation)
-            # TODO: here too add some LLM invocation to fix the error
+        return error_flag
+
+    def fit_transform(self, df):
+        # drop_operations = []
+        # self.errors = []
+        self.validate_pipeline(df)
+        # self.build_default_pipeline(df)
+        for operation in self.operations_pipeline:
+            df = operation.fit_transform(df)
+            # except (KeyError, ValueError) as e:
+            # drop_operations.append(operation)
+            # self.errors.append(
+            #     f"{operation.__class__.__name__}{e.__class__.__name__}: {e}"
+            # )
+        # for operation in drop_operations:
+        #     self.operations_pipeline.remove(operation)
+        # TODO: here too add some LLM invocation to fix the error
         return df
 
     def transform(self, df):
@@ -93,36 +110,47 @@ class OperationPipeline:
             for operation in self.operations_pipeline
         ]
         # convert list to list of pairs
-        operation_names = list(zip(operation_names, operation_names[1:]))
-        graph.add_edges_from(operation_names)
+        # operation_names = list(zip(operation_names, operation_names[1:]))
+        # graph.add_edges_from(operation_names)
+
+        edges = list(
+            zip(list(range(len(operation_names))), list(range(1, len(operation_names))))
+        )
+        graph.add_edges_from(edges)
+
+        labels = dict(zip(list(range(len(operation_names))), operation_names))
 
         nx.draw_spectral(
-            graph, with_labels=True, font_weight="bold", node_size=1000, font_size=10
+            graph,
+            labels=labels,
+            with_labels=True,
+            font_weight="bold",
+            node_size=1000,
+            font_size=10,
         )
         return graph
 
-
     def build_default_pipeline(self, df):
+        fillna_operation_inps = [
+            op.inp for op in self.operations_pipeline if op.__class__ == FillnaMean
+        ]
         for column in df.columns:
             if is_numeric_dtype(df[column]):
+                # if df[column] not in fillna_operation_inps:
                 self.add_operation(FillnaMean, [column])
             else:
                 if df[column].dtype.name == "object" and df[column].nunique() < 10:
                     self.add_operation(LabelEncoding, [column])
                 else:
                     self.add_operation(Drop, [column])
-        return None
 
     def __str__(self):
-        try:
-            return self.split_by.join(
-                [
-                    operation.__class__.__name__ + "(" + ",".join(operation.inp) + ")"
-                    for operation in self.operations_pipeline
-                ]
-            )
-        except TypeError as e:
-            pass
+        return self.split_by.join(
+            [
+                operation.__class__.__name__ + "(" + ",".join(operation.inp) + ")"
+                for operation in self.operations_pipeline
+            ]
+        )
 
 
 if __name__ == "__main__":

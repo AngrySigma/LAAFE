@@ -50,6 +50,16 @@ class LLMTemplate:
         )
         self.messages = []
 
+    def generate_llm_messages(self, dataset, metrics, operations_pipeline):
+        self.messages.append(self.initial_template())
+        self.messages.append(str(dataset))
+        self.messages.append(self.previous_evaluations_template())
+        self.messages.append(self.instruction_template())
+        self.messages[-2] += (
+            f"\nInitial evaluation: {metrics['accuracy']}, "
+            f"Pipeline: {operations_pipeline}"
+        )
+
     def _add_operators(self, operators):
         self.operators += [OPERATIONS[operator] for operator in operators]
 

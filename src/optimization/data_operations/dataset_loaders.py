@@ -45,7 +45,7 @@ class DatasetLoader:
             download_qualities=True,
             download_features_meta_data=True,
         )
-        data, target, categorical_indicator, attribute_names = dataset.get_data(
+        data, target, _, _ = dataset.get_data(
             dataset_format="dataframe", target=dataset.default_target_attribute
         )
         collection_date = dataset.collection_date
@@ -71,6 +71,12 @@ class DatasetLoader:
 
     def __getitem__(self, item):
         return self.load_dataset(self.dataset_ids[item])
+
+    def __iter__(self):
+        index = 0
+        while index < len(self.dataset_ids):
+            yield self.load_dataset(self.dataset_ids[index])
+            index += 1
 
     def __len__(self):
         return len(self.dataset_ids)
