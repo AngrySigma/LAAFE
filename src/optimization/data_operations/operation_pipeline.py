@@ -1,6 +1,7 @@
 import re
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 
 import networkx as nx
 import pandas as pd
@@ -103,7 +104,7 @@ class OperationPipeline:
         for operation, inp in operations_pipeline:
             self.add_operation(operation, inp if inp != [""] else None)
 
-    def draw_pipeline(self):
+    def draw_pipeline(self, save_path: Path | str | None = None):
         graph = nx.DiGraph()
         operation_names = [
             "\n".join([operation.__class__.__name__] + operation.inp)
@@ -128,18 +129,18 @@ class OperationPipeline:
             node_size=1000,
             font_size=10,
         )
+        if save_path:
+            plt.close()
+            plt.savefig(save_path)
         return graph
 
     def build_default_pipeline(self, df):
-        fillna_operation_inps = [
-            op.inp for op in self.operations_pipeline if op.__class__ == FillnaMean
-        ]
         for column in df.columns:
             if is_numeric_dtype(df[column]):
-                # if df[column] not in fillna_operation_inps:
                 self.add_operation(FillnaMean, [column])
             else:
-                if df[column].dtype.name == "object" and df[column].nunique() < 10:
+                if (df[column].dtype.name ==
+                        "object" and df[column].nunique() < 10):
                     self.add_operation(LabelEncoding, [column])
                 else:
                     self.add_operation(Drop, [column])
@@ -181,4 +182,5 @@ if __name__ == "__main__":
     plt.savefig("D:/TEMP/pipeline.png")
     plt.show()
     print(test_data)
-    # print(operation_pipeline.transform(pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 2, 3, 4, 5]})))
+    # print(operation_pipeline.transform(pd.DataFrame({"a": [1, 2, 3, 4, 5],
+    #                                                  "b": [1, 2, 3, 4, 5]})))

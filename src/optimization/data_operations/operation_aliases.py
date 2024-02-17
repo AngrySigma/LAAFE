@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -51,9 +50,6 @@ class ReturnOperation(Operation, ABC):
 
 
 class Drop(InplaceOperation):
-    def __init__(self, inp=None):
-        super().__init__(inp)
-
     @classmethod
     def description(cls):
         return "Drop input columns inplace"
@@ -318,9 +314,6 @@ class LabelEncoding(InplaceOperation):
 
 
 class OneHotEncoding(InplaceOperation):
-    def __init__(self, inp=None):
-        super().__init__(inp)
-
     @classmethod
     def description(cls):
         return "One hot encoding of categorical features"

@@ -88,12 +88,12 @@ def run_feature_generation_experiment(cfg: DictConfig) -> None:
                 pipeline_str = str(operations_pipeline)
                 operations_pipeline.fit_transform(data_train)
                 operations_pipeline.transform(data_test)
-                plt.close()
                 metrics = model(random_state=42, pipeline=operations_pipeline).train(
                     data_train, target_train, data_test, target_test
                 )
-                operations_pipeline.draw_pipeline()
-                plt.savefig(dataset_dir / f"pipeline_{iteration + 1}.png")
+                operations_pipeline.draw_pipeline(
+                    dataset_dir / f"pipeline_{iteration + 1}.png"
+                )
 
                 write_model_evaluation(metrics, results_dir)
                 llm_template.messages[-2] += (
@@ -149,9 +149,7 @@ def train_initial_model(cfg, model, dataset, dataset_dir: Path):
         dataset.data.copy(), dataset.target.copy(), test_size=0.2
     )
     operations_pipeline.build_default_pipeline(data_train)
-    plt.close()
-    operations_pipeline.draw_pipeline()
-    plt.savefig(dataset_dir / "pipeline_0.png")
+    operations_pipeline.draw_pipeline(dataset_dir / "pipeline_0.png")
     data_train = operations_pipeline.fit_transform(data_train)
     data_test = operations_pipeline.transform(data_test)
 
