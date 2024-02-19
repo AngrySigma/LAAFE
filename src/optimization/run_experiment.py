@@ -5,7 +5,6 @@ from pathlib import Path
 from time import sleep
 
 import hydra
-import matplotlib.pyplot as plt
 import numpy as np
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
@@ -20,7 +19,6 @@ from src.optimization.llm.llm_templates import LLMTemplate
 
 def run_feature_generation_experiment(cfg: DictConfig) -> None:
     np.random.seed(42)
-    # init save folder
     results_dir: Path = init_save_folder(cfg.experiment.root_path)
 
     # init llm
@@ -32,7 +30,6 @@ def run_feature_generation_experiment(cfg: DictConfig) -> None:
     llm_template = LLMTemplate(operators=cfg.llm.operators)
 
     model = MODELS[cfg.model_type]
-
     dataset_ids = cfg[cfg.problem_type].datasets
     dataset_loader = DatasetLoader(dataset_ids=dataset_ids)
     for dataset in dataset_loader:
@@ -47,7 +44,6 @@ def run_feature_generation_experiment(cfg: DictConfig) -> None:
         )
         write_model_evaluation(metrics, results_dir)
         logging.info(f'Initial 0: {metrics["accuracy"]}')
-
         llm_template.generate_llm_messages(dataset, metrics, operations_pipeline)
 
         for iteration in range(cfg.experiment.num_iterations):
@@ -77,10 +73,12 @@ def run_feature_generation_experiment(cfg: DictConfig) -> None:
             # )
 
             try:
-                data_train, data_test, target_train, target_test = train_test_split(
-                    dataset.data.copy(), dataset.target.copy(), test_size=0.2
+                (data_train, data_test,
+                 target_train, target_test) = train_test_split(
+                    dataset.data.copy(),
+                    dataset.target.copy(),
+                    test_size=0.2
                 )
-
                 operations_pipeline = OperationPipeline(
                     OPERATIONS, split_by=cfg.llm.operation_split
                 )
