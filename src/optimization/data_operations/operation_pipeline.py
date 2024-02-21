@@ -1,6 +1,5 @@
 import logging
 import re
-from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
 
@@ -93,7 +92,7 @@ class OperationPipeline:
 
     def parse_pipeline(self, prompt):
         operations_pipeline = [
-            operation.strip("\w)").split("(")
+            operation.strip(r"\w)").split("(")
             for operation in prompt.strip().split(self.split_by)
         ]
         operations_pipeline = [
@@ -140,8 +139,7 @@ class OperationPipeline:
             if is_numeric_dtype(df[column]):
                 self.add_operation(FillnaMean, [column])
             else:
-                if (df[column].dtype.name ==
-                        "object" and df[column].nunique() < 10):
+                if df[column].dtype.name == "object" and df[column].nunique() < 10:
                     self.add_operation(LabelEncoding, [column])
                 else:
                     self.add_operation(Drop, [column])
@@ -157,7 +155,7 @@ class OperationPipeline:
 
 if __name__ == "__main__":
     test_data = pd.DataFrame({"a": [5, 2, 2, 4, 5], "b": [1, 2, None, 4, 5]})
-    prompt = (
+    PROMPT = (
         "fillna_mean(b)->"
         "pca(b)->"
         "drop(a)->"
@@ -169,11 +167,10 @@ if __name__ == "__main__":
         "sub(b_0.75, b_1.0)->"
         "mul(b_0.75, b_1.0)->"
         "div(b_0.75, b_1.0)"
-
     )
 
-    operation_pipeline = OperationPipeline(OPERATIONS, split_by='->')
-    operation_pipeline.parse_pipeline(prompt)
+    operation_pipeline = OperationPipeline(OPERATIONS, split_by="->")
+    operation_pipeline.parse_pipeline(PROMPT)
     test_data = operation_pipeline.fit_transform(test_data)
     operation_pipeline.draw_pipeline()
     plt.show()

@@ -60,7 +60,7 @@ class Add(Operation):
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df['+'.join(self.inp)] = df[self.inp].sum(axis=1)
+        df["+".join(self.inp)] = df[self.inp].sum(axis=1)
         return df
 
     def transform(self, df):
@@ -77,7 +77,7 @@ class Sub(Operation):
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df['-'.join(self.inp)] = df[self.inp[0]].sub([self.inp[1]])
+        df["-".join(self.inp)] = df[self.inp[0]].sub([self.inp[1]])
         return df
 
     def transform(self, df):
@@ -94,9 +94,7 @@ class Mul(Operation):
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        # df[self.inp[0]].mul(df[self.inp[1]])
-        # df['*'.join(self.inp)] = df[self.inp].sum(axis=1)
-        df['*'.join(self.inp)] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
+        df["*".join(self.inp)] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
 
     def transform(self, df):
@@ -113,14 +111,13 @@ class Div(Operation):
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df['/'.join(self.inp)] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
+        df["/".join(self.inp)] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
         return df
 
     def transform(self, df):
         return self.fit_transform(df)
 
 
-# TODO: add train and test transformations
 class Pca(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
@@ -338,7 +335,9 @@ class OneHotEncoding(Operation):
     def fit_transform(self, df):
         super().fit_transform(df)
         for col in self.inp:
-            df = pd.concat([df, pd.get_dummies(df[col], prefix=col).astype(int)], axis=1)
+            df = pd.concat(
+                [df, pd.get_dummies(df[col], prefix=col).astype(int)], axis=1
+            )
             df.drop(columns=[col], inplace=True)
         return df
 
