@@ -31,12 +31,17 @@ regression:
 llm:
   operation_split: "->"
   operators:
+    - "add"
+    - "sub"
+    - "mul"
+    - "div"
     - "pca"
     - "fillnamean"
     - "fillnamedian"
     - "std"
     - "minmax"
     - "drop"
+#    - "frequencyencoding"
     - "binning"
     - "labelencoding"
     - "onehotencoding"

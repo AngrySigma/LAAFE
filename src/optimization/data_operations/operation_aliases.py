@@ -32,24 +32,7 @@ class Operation(ABC):
         return self.description()
 
 
-# TODO: check this. Unnecessary, can be deleted
-class InplaceOperation(Operation, ABC):
-    @abstractmethod
-    def __call__(self, df) -> None:
-        pass
-
-
-# TODO: update this
-class ReturnOperation(Operation, ABC):
-    def __init__(self, *args, inp=None, **kwargs):
-        super().__init__(inp, *args, **kwargs)
-
-    @abstractmethod
-    def __call__(self, df) -> pd.DataFrame:
-        return df
-
-
-class Drop(InplaceOperation):
+class Drop(Operation):
     @classmethod
     def description(cls):
         return "Drop input columns inplace"
@@ -66,48 +49,79 @@ class Drop(InplaceOperation):
         return df
 
 
-# old
+# TODO: add subclass arithmetic
 class Add(Operation):
-    def __init__(self):
-        super().__init__()
-        self.description = 'Add two input columns together to a new column "add"'
+    def __call__(self, df):
+        return self.fit_transform(df)
 
-    def __call__(self, df, inp):
-        return df[inp[0]].add(df[inp[1]])
+    @classmethod
+    def description(cls):
+        return r"Add two input columns together to a new column \"add\""
+
+    def fit_transform(self, df):
+        super().fit_transform(df)
+        df['+'.join(self.inp)] = df[self.inp].sum(axis=1)
+        return df
+
+    def transform(self, df):
+        return self.fit_transform(df)
 
 
-# old
 class Sub(Operation):
-    def __init__(self):
-        super().__init__()
-        self.description = 'Subtract two input columns together to a new column "sub"'
+    def __call__(self, df):
+        return self.fit_transform(df)
 
-    def __call__(self, df, inp):
-        return df[inp[0]].sub(df[inp[1]])
+    @classmethod
+    def description(cls):
+        return r"Subtract two input columns together to a new column \"sub\""
+
+    def fit_transform(self, df):
+        super().fit_transform(df)
+        df['-'.join(self.inp)] = df[self.inp[0]].sub([self.inp[1]])
+        return df
+
+    def transform(self, df):
+        return self.fit_transform(df)
 
 
-# old
 class Mul(Operation):
-    def __init__(self):
-        super().__init__()
-        self.description = 'Multiply two input columns together to a new column "mul"'
+    def __call__(self, df):
+        return self.fit_transform(df)
 
-    def __call__(self, df, inp):
-        return df[inp[0]].mul(df[inp[1]])
+    @classmethod
+    def description(cls):
+        return r"Multiply two input columns together to a new column \"mul\""
+
+    def fit_transform(self, df):
+        super().fit_transform(df)
+        # df[self.inp[0]].mul(df[self.inp[1]])
+        # df['*'.join(self.inp)] = df[self.inp].sum(axis=1)
+        df['*'.join(self.inp)] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
+        return df
+
+    def transform(self, df):
+        return self.fit_transform(df)
 
 
-# old
 class Div(Operation):
-    def __init__(self):
-        super().__init__()
-        self.description = 'Divide two input columns together to a new column "div"'
+    def __call__(self, df):
+        return self.fit_transform(df)
 
-    def __call__(self, df, inp):
-        return df[inp[0]].div(df[inp[1]])
+    @classmethod
+    def description(cls):
+        return r"Divide two input columns together to a new column \"div\""
+
+    def fit_transform(self, df):
+        super().fit_transform(df)
+        df['/'.join(self.inp)] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
+        return df
+
+    def transform(self, df):
+        return self.fit_transform(df)
 
 
 # TODO: add train and test transformations
-class Pca(InplaceOperation):
+class Pca(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.pca = PCA(0.95)
@@ -135,7 +149,7 @@ class Pca(InplaceOperation):
         return df
 
 
-class FillnaMean(InplaceOperation):
+class FillnaMean(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.mean = None
@@ -144,8 +158,8 @@ class FillnaMean(InplaceOperation):
     def description(cls):
         return "Fill missing values with mean inplace"
 
-    def __call__(self, df, inp=None):
-        return self.fit_transform(df, inp)
+    def __call__(self, df):
+        return self.fit_transform(df)
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -160,7 +174,7 @@ class FillnaMean(InplaceOperation):
         return df
 
 
-class FillnaMedian(InplaceOperation):
+class FillnaMedian(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.median = None
@@ -183,7 +197,7 @@ class FillnaMedian(InplaceOperation):
         return df
 
 
-class Std(InplaceOperation):
+class Std(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.scaler = StandardScaler()
@@ -206,7 +220,7 @@ class Std(InplaceOperation):
 
 
 # TODO: here we can create scaler subclass
-class Minmax(InplaceOperation):
+class Minmax(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.scaler = MinMaxScaler()
@@ -228,7 +242,7 @@ class Minmax(InplaceOperation):
         return df
 
 
-class FrequencyEncoding(InplaceOperation):
+class FrequencyEncoding(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
 
@@ -254,7 +268,7 @@ class FrequencyEncoding(InplaceOperation):
         return df
 
 
-class Binning(InplaceOperation):
+class Binning(Operation):
     def __init__(self, inp=None, bins_num=10):
         super().__init__(inp)
         self.bins_num = bins_num
@@ -287,7 +301,7 @@ class Binning(InplaceOperation):
         return df
 
 
-class LabelEncoding(InplaceOperation):
+class LabelEncoding(Operation):
     def __init__(self, inp=None):
         super().__init__(inp)
         self.label_encoders = {}
@@ -313,7 +327,7 @@ class LabelEncoding(InplaceOperation):
         return df
 
 
-class OneHotEncoding(InplaceOperation):
+class OneHotEncoding(Operation):
     @classmethod
     def description(cls):
         return "One hot encoding of categorical features"
@@ -324,13 +338,11 @@ class OneHotEncoding(InplaceOperation):
     def fit_transform(self, df):
         super().fit_transform(df)
         for col in self.inp:
-            df = pd.concat([df, pd.get_dummies(df[col], prefix=col)], axis=1)
+            df = pd.concat([df, pd.get_dummies(df[col], prefix=col).astype(int)], axis=1)
             df.drop(columns=[col], inplace=True)
         return df
 
     def transform(self, df):
-        # TODO: if some features are new in the test dataset, it will fail
-        for col in self.inp:
-            df = pd.concat([df, pd.get_dummies(df[col], prefix=col)], axis=1)
-            df.drop(columns=[col], inplace=True)
-        return df
+        # if there are new features in the test set, it will fail likely.
+        # solution: save the dummies values and use them for test set
+        return self.fit_transform(df)

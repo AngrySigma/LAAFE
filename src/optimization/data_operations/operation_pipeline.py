@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import OrderedDict
 from copy import deepcopy
@@ -37,8 +38,8 @@ def apply_pipeline(df, parsed_data_operation_pipeline):
         try:
             df = function(df, inp)
             # df[f'{operation}_{"_".join(inp)}'] = function(df, inp[0])
-        except KeyError:
-            pass
+        except (KeyError, TypeError) as e:
+            logging.error(f"Error in {operation} with {inp}: {e}")
     return df
 
 
@@ -59,7 +60,8 @@ class OperationPipeline:
         for operation in self.operations_pipeline:
             try:
                 test_df = operation.fit_transform(test_df)
-            except (KeyError, ValueError) as e:
+            except (KeyError, ValueError, TypeError) as e:
+                logging.debug(f"Error in {operation} with input {operation.inp}: {e}")
                 drop_operations.append(operation)
                 error_flag = True
 
@@ -120,7 +122,7 @@ class OperationPipeline:
         graph.add_edges_from(edges)
 
         labels = dict(zip(list(range(len(operation_names))), operation_names))
-
+        plt.close()
         nx.draw_spectral(
             graph,
             labels=labels,
@@ -130,7 +132,6 @@ class OperationPipeline:
             font_size=10,
         )
         if save_path:
-            plt.close()
             plt.savefig(save_path)
         return graph
 
@@ -155,32 +156,25 @@ class OperationPipeline:
 
 
 if __name__ == "__main__":
-    data_operation_pipeline = "pca(a)"
-    parsed_data_operation_pipeline = parse_data_operation_pipeline(
-        data_operation_pipeline
-    )
     test_data = pd.DataFrame({"a": [5, 2, 2, 4, 5], "b": [1, 2, None, 4, 5]})
-    # for operation in parsed_data_operation_pipeline:
-    #     function = OPERATIONS[operation]
-    #     test_data[operation] = function(test_data,
-    #                                     parsed_data_operation_pipeline[
-    #                                         operation])
-    # test_data = apply_pipeline(test_data, parsed_data_operation_pipeline)
     prompt = (
-        "fillna_mean(b)\n"
-        "pca(b)\n"
-        "drop(a)\n"
-        "std(b)\n"
-        "minmax()\n"
-        "onehotencoding(pca_0, b)\n"
+        "fillna_mean(b)->"
+        "pca(b)->"
+        "drop(a)->"
+        "std(b)->"
+        "minmax()->"
+        "onehotencoding(pca_0, b)->"
+        "drop(pca_0_0.0)->"
+        "add(b_0.75, b_1.0)->"
+        "sub(b_0.75, b_1.0)->"
+        "mul(b_0.75, b_1.0)->"
+        "div(b_0.75, b_1.0)"
+
     )
 
-    operation_pipeline = OperationPipeline(OPERATIONS)
+    operation_pipeline = OperationPipeline(OPERATIONS, split_by='->')
     operation_pipeline.parse_pipeline(prompt)
     test_data = operation_pipeline.fit_transform(test_data)
     operation_pipeline.draw_pipeline()
-    plt.savefig("D:/TEMP/pipeline.png")
     plt.show()
     print(test_data)
-    # print(operation_pipeline.transform(pd.DataFrame({"a": [1, 2, 3, 4, 5],
-    #                                                  "b": [1, 2, 3, 4, 5]})))
