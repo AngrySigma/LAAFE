@@ -122,7 +122,7 @@ class OperationPipeline:
 
         labels = dict(zip(list(range(len(operation_names))), operation_names))
         plt.close()
-        nx.draw_spectral(
+        nx.draw_kamada_kawai(
             graph,
             labels=labels,
             with_labels=True,

@@ -9,7 +9,7 @@ class ChatMessage:
     role: str = "user"
 
     def __str__(self):
-        return f"{self.role}: {self.content}"
+        return self.content
 
 
 class MessageHistory:
