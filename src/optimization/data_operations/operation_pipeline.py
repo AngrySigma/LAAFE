@@ -38,7 +38,7 @@ def apply_pipeline(df, parsed_data_operation_pipeline):
             df = function(df, inp)
             # df[f'{operation}_{"_".join(inp)}'] = function(df, inp[0])
         except (KeyError, TypeError) as e:
-            logging.error(f"Error in {operation} with {inp}: {e}")
+            logging.error(r"Error in %s with %s: %s", operation, inp, e)
     return df
 
 
@@ -60,7 +60,12 @@ class OperationPipeline:
             try:
                 test_df = operation.fit_transform(test_df)
             except (KeyError, ValueError, TypeError) as e:
-                logging.debug(f"Error in {operation} with input {operation.inp}: {e}")
+                logging.debug(
+                    "Error in {operation} with input {inp}: {e}",
+                    operation=operation,
+                    inp=operation.inp,
+                    e=e,
+                )
                 drop_operations.append(operation)
                 error_flag = True
 

@@ -5,7 +5,20 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 
 
-class Operation(ABC):
+class PipelineNode(ABC):
+    @classmethod
+    @abstractmethod
+    def description(cls):
+        pass
+
+    def __str__(self):
+        return self.description()
+
+    def __repr__(self):
+        return self.description()
+
+
+class Operation(PipelineNode, ABC):
     def __init__(self, inp=None):
         self.inp = [inp] if isinstance(inp, str) else inp
 
@@ -19,17 +32,6 @@ class Operation(ABC):
     @abstractmethod
     def transform(self, df):
         pass
-
-    @classmethod
-    @abstractmethod
-    def description(cls):
-        pass
-
-    def __str__(self):
-        return self.description()
-
-    def __repr__(self):
-        return self.description()
 
 
 class Drop(Operation):
@@ -56,7 +58,7 @@ class Add(Operation):
 
     @classmethod
     def description(cls):
-        return r"Add two input columns together to a new column \"add\""
+        return 'Add two input columns together to a new column "add"'
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -73,7 +75,7 @@ class Sub(Operation):
 
     @classmethod
     def description(cls):
-        return r"Subtract two input columns together to a new column \"sub\""
+        return 'Subtract two input columns together to a new column "sub"'
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -90,7 +92,7 @@ class Mul(Operation):
 
     @classmethod
     def description(cls):
-        return r"Multiply two input columns together to a new column \"mul\""
+        return 'Multiply two input columns together to a new column "mul"'
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -107,7 +109,7 @@ class Div(Operation):
 
     @classmethod
     def description(cls):
-        return r"Divide two input columns together to a new column \"div\""
+        return 'Divide two input columns together to a new column "div"'
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -181,7 +183,7 @@ class FillnaMedian(Operation):
         return "Fill missing values with median inplace"
 
     def __call__(self, df, inp=None):
-        return self.fit_transform(df, inp)
+        return self.fit_transform(df)
 
     def fit_transform(self, df):
         super().fit_transform(df)
@@ -240,9 +242,6 @@ class Minmax(Operation):
 
 
 class FrequencyEncoding(Operation):
-    def __init__(self, inp=None):
-        super().__init__(inp)
-
     @classmethod
     def description(cls):
         return "Frequency encoding of categorical features"

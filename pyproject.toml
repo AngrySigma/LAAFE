@@ -39,3 +39,6 @@ ignore-imports = "yes"
 ignore-signatures = "yes"
 
 min-similarity-lines = 7
+
+[LOGGING]
+logging-format-style='old'
