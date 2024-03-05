@@ -1,4 +1,6 @@
+import glob
 import logging
+import os.path
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -14,6 +16,8 @@ from src.optimization.data_operations.operation_aliases import (
     FillnaMean,
     LabelEncoding,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def parse_data_operation_pipeline(data_operation_pipeline):
@@ -61,10 +65,7 @@ class OperationPipeline:
                 test_df = operation.fit_transform(test_df)
             except (KeyError, ValueError, TypeError) as e:
                 logging.debug(
-                    "Error in {operation} with input {inp}: {e}",
-                    operation=operation,
-                    inp=operation.inp,
-                    e=e,
+                    r"Error in %s with input %s: %s", operation, operation.inp, e
                 )
                 drop_operations.append(operation)
                 error_flag = True
@@ -80,13 +81,6 @@ class OperationPipeline:
         # self.build_default_pipeline(df)
         for operation in self.operations_pipeline:
             df = operation.fit_transform(df)
-            # except (KeyError, ValueError) as e:
-            # drop_operations.append(operation)
-            # self.errors.append(
-            #     f"{operation.__class__.__name__}{e.__class__.__name__}: {e}"
-            # )
-        # for operation in drop_operations:
-        #     self.operations_pipeline.remove(operation)
         # TODO: here too add some LLM invocation to fix the error
         return df
 
@@ -95,19 +89,20 @@ class OperationPipeline:
             df = operation.transform(df)
         return df
 
-    def parse_pipeline(self, prompt):
+    def parse_pipeline(self, completion):
         operations_pipeline = [
             operation.strip(r"\w)").split("(")
-            for operation in prompt.strip().split(self.split_by)
+            for operation in completion.strip().split(self.split_by)
         ]
-        operations_pipeline = [
-            (
-                self.operations[re.sub("[_-]", "", operation[0].lower())],
-                operation[1].lower().replace(" ", "").split(","),
-            )
-            for operation in operations_pipeline
-        ]
-        for operation, inp in operations_pipeline:
+        parsed_pipeline = []
+        for operation in operations_pipeline:
+            try:
+                op = self.operations[re.sub("[_-]", "", operation[0].lower())]
+                inp = operation[1].lower().replace(" ", "").split(",")
+                parsed_pipeline.append((op, inp))
+            except (KeyError, IndexError) as e:
+                logger.error(r"Error in %s with %s: %s", operation, inp, e)
+        for operation, inp in parsed_pipeline:
             self.add_operation(operation, inp if inp != [""] else None)
 
     def draw_pipeline(self, save_path: Path | str | None = None):
@@ -135,8 +130,14 @@ class OperationPipeline:
             node_size=1000,
             font_size=10,
         )
-        if save_path:
+        if not save_path:
+            return graph
+        save_path = Path(save_path)
+        if not os.path.isdir(save_path):
             plt.savefig(save_path)
+            return graph
+        num_pipelines = len(glob.glob(str(save_path / "pipeline_*.png")))
+        plt.savefig(save_path / f"pipeline_{str(num_pipelines)}")
         return graph
 
     def build_default_pipeline(self, df):
@@ -152,10 +153,36 @@ class OperationPipeline:
     def __str__(self):
         return self.split_by.join(
             [
-                operation.__class__.__name__ + "(" + ",".join(operation.inp) + ")"
+                operation.__class__.__name__
+                + "("
+                + (",".join(operation.inp) if operation.inp is not None else "")
+                + ")"
                 for operation in self.operations_pipeline
             ]
         )
+
+
+class OperationPipelineGenetic:
+    def __init__(self, operations, split_by="\n"):
+        self.operations_pipelines = []
+        self.operations = operations
+        self.errors = None
+        self.split_by = split_by
+
+    def parse_pipeline(self, completion):
+        pipelines = completion.strip().split("\n")
+        for proposal_pipeline in pipelines:
+            pipeline = OperationPipeline(self.operations, split_by=self.split_by)
+            pipeline.parse_pipeline(proposal_pipeline)
+            self.operations_pipelines.append(pipeline)
+
+    def __str__(self):
+        return "\n".join([str(pipeline) for pipeline in self.operations_pipelines])
+
+    def fit_transform(self, df):
+        for pipeline in self.operations_pipelines:
+            df = pipeline.fit_transform(df)
+        return df
 
 
 if __name__ == "__main__":

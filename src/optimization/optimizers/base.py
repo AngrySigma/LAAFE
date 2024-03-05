@@ -7,7 +7,7 @@ import numpy as np
 from omegaconf import DictConfig
 
 from src.optimization.data_operations.dataset_loaders import DatasetLoader
-from src.optimization.llm.gpt import ChatBot
+from src.optimization.llm.gpt import ChatBot, ChatMessage
 from src.optimization.llm.llm_templates import LLMTemplate
 
 
@@ -21,7 +21,14 @@ class BaseOptimizer(ABC):
             api_organization=cfg.llm.gpt.openai_api_organization,
             model=cfg.llm.gpt.model_name,
         )
-        self.llm_template = LLMTemplate(operators=cfg.llm.operators)
+        self.llm_template = LLMTemplate(
+            operators=cfg.llm.operators,
+            experiment_description=cfg.llm.experiment_description,
+            output_format=cfg.llm.output_format,
+            available_nodes_description=cfg.llm.available_nodes_description,
+            instruction=cfg.llm.instruction,
+            message_order=cfg.llm.message_order,
+        )
         self.dataset_loader = DatasetLoader(dataset_ids=cfg[cfg.problem_type].datasets)
         self.cfg = cfg
 
@@ -34,7 +41,11 @@ class BaseOptimizer(ABC):
         return results_dir
 
     @abstractmethod
-    def get_completion(self) -> str:
+    def get_completion(self, message: ChatMessage) -> str:
+        pass
+
+    @abstractmethod
+    def get_message(self) -> str:
         pass
 
     def write_model_evaluation(self, metrics):
