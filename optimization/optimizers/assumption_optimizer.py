@@ -1,8 +1,8 @@
 import numpy as np
 from omegaconf import DictConfig
 
-from src.optimization.llm.gpt import ChatMessage
-from src.optimization.optimizers.base import BaseOptimizer
+from optimization.llm.gpt import ChatMessage
+from optimization.optimizers.base import BaseOptimizer
 
 # TODO
 TEST_ASSUMPTION_PIPELINE = ""

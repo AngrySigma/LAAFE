@@ -10,8 +10,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from pandas.core.dtypes.common import is_numeric_dtype
 
-from src.optimization.data_operations import OPERATIONS
-from src.optimization.data_operations.operation_aliases import (
+from optimization.data_operations import OPERATIONS
+from optimization.data_operations.operation_aliases import (
     Drop,
     FillnaMean,
     LabelEncoding,

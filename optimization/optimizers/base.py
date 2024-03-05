@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 from omegaconf import DictConfig
 
-from src.optimization.data_operations.dataset_loaders import DatasetLoader
-from src.optimization.llm.gpt import ChatBot, ChatMessage
-from src.optimization.llm.llm_templates import LLMTemplate
+from optimization.data_operations.dataset_loaders import DatasetLoader
+from optimization.llm.gpt import ChatBot, ChatMessage
+from optimization.llm.llm_templates import LLMTemplate
 
 
 class BaseOptimizer(ABC):

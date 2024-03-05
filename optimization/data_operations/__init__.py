@@ -1,4 +1,4 @@
-from src.optimization.data_operations.operation_aliases import (
+from optimization.data_operations.operation_aliases import (
     Add,
     Binning,
     Div,

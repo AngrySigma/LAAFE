@@ -6,14 +6,14 @@ import pyperclip
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 
-from src.optimization import MODELS
-from src.optimization.data_operations import OPERATIONS
-from src.optimization.data_operations.operation_pipeline import (
+from optimization import MODELS
+from optimization.data_operations import OPERATIONS
+from optimization.data_operations.operation_pipeline import (
     OperationPipeline,
     OperationPipelineGenetic,
 )
-from src.optimization.llm.gpt import ChatMessage
-from src.optimization.optimizers.base import BaseOptimizer
+from optimization.llm.gpt import ChatMessage
+from optimization.optimizers.base import BaseOptimizer
 
 logger = logging.getLogger(__name__)
 
