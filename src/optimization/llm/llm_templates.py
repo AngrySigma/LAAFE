@@ -51,6 +51,7 @@ class BaseLLMTemplate:
 
 @dataclass
 class LLMTemplate:
+    operators: list[str]
     experiment_description: str = (
         "You should perform a feature engineering for the provided "
         "dataset to improve the performance of the model. "
@@ -84,12 +85,12 @@ class LLMTemplate:
         "instruction",
     )
 
-    def __init__(self, operators, previous_evaluations=None):
-        self.operators = [OPERATIONS[operator] for operator in operators]
+    def __post_init__(self):
+        self.operators: list[PipelineNode] = [
+            OPERATIONS[operator] for operator in self.operators
+        ]
         self.previous_evaluations = (
-            previous_evaluations
-            if (previous_evaluations is not None)
-            else "Previous pipeline evaluations and corresponding metrics:"
+            "Previous pipeline evaluations and corresponding metrics:"
         )
         self.messages = {}
 
