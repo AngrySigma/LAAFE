@@ -112,8 +112,7 @@ class LLMTemplate:
         if metrics is not None and operations_pipeline is not None:
             self.messages["previous_evaluations"] = self.previous_evaluations_template()
             self.messages["previous_evaluations"] += (
-                f"\nInitial evaluation: {metrics['accuracy']}, "
-                f"Pipeline: {operations_pipeline}"
+                f"\nInitial evaluation: {metrics}, " f"Pipeline: {operations_pipeline}"
             )
         self.messages["instruction"] = self.instruction
 

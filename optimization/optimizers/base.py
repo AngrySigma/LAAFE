@@ -41,6 +41,10 @@ class BaseOptimizer(ABC):
         return results_dir
 
     @abstractmethod
+    def train_initial_model(self, dataset, dataset_dir: Path):
+        pass
+
+    @abstractmethod
     def get_completion(self, message: ChatMessage) -> str:
         pass
 
