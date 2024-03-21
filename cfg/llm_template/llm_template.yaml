@@ -1,0 +1,18 @@
+experiment_description: "You should perform a feature engineering for the provided dataset to improve the performance of the model. "
+
+#output_format: "The output is an operation pipeline written as in PIPELINE EXAMPLE:\n\toperation1(df_column)->operation2(df_column_1, df_column_2)->operationN()\nEmpty brackets mean that operation is applied to all columns of the dataset.\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
+output_format: "The output is a sequence of operation pipelines, each written as in PIPELINE EXAMPLE:\n\toperation1(df_column)->operation2(df_column_1, df_column_2)->operationN()\nEmpty brackets mean that operation is applied to all columns of the dataset. Different pipelines should be split by line breaks.\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
+#
+available_nodes_description: "Available data operations are the following"
+#
+#instruction: "Based on the information provided, please, choose the operations you want to use in your pipeline and write them in the output format. Operation inputs have to match the columns of the dataset. Please, do not propose the pipelines already met in history."
+instruction: "Based on the information provided, please, choose the operations you want to use in your pipeline and write them in the output format. Operation inputs have to match the columns of the dataset. Avoid repeating operation pipelines. Please, provide 10 proposals separated by line break."
+
+message_order:
+  - "experiment_description"
+  - "output_format"
+  - "available_nodes"
+  - "dataset"
+  - "initial_advice"
+  - "previous_evaluations"
+  - "instruction"

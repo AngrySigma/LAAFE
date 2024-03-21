@@ -63,7 +63,13 @@ class OperationPipeline:
         for operation in self.operations_pipeline:
             try:
                 test_df = operation.fit_transform(test_df)
-            except (KeyError, ValueError, TypeError) as e:
+            except (
+                KeyError,
+                ValueError,
+                TypeError,
+                IndexError,
+                ZeroDivisionError,
+            ) as e:
                 logging.debug(
                     r"Error in %s with input %s: %s", operation, operation.inp, e
                 )
@@ -90,18 +96,26 @@ class OperationPipeline:
         return df
 
     def parse_pipeline(self, completion):
+        completion = completion.strip().replace(" ", "")
         operations_pipeline = [
-            operation.strip(r"\w)").split("(")
-            for operation in completion.strip().split(self.split_by)
+            operation.strip(r")").split("(")
+            for operation in completion.split(self.split_by)
         ]
         parsed_pipeline = []
         for operation in operations_pipeline:
             try:
+                inp = None
                 op = self.operations[re.sub("[_-]", "", operation[0].lower())]
                 inp = operation[1].lower().replace(" ", "").split(",")
                 parsed_pipeline.append((op, inp))
             except (KeyError, IndexError) as e:
-                logger.error(r"Error in %s with %s: %s", operation, inp, e)
+                logger.error(
+                    r"Error in %s with %s: %s. Completion: %s",
+                    operation,
+                    inp,
+                    e,
+                    completion,
+                )
         for operation, inp in parsed_pipeline:
             self.add_operation(operation, inp if inp != [""] else None)
 
@@ -118,9 +132,12 @@ class OperationPipeline:
         edges = list(
             zip(list(range(len(operation_names))), list(range(1, len(operation_names))))
         )
+        labels = dict(zip(list(range(len(operation_names))), operation_names))
+
+        if labels:
+            graph.add_node(0)
         graph.add_edges_from(edges)
 
-        labels = dict(zip(list(range(len(operation_names))), operation_names))
         plt.close()
         nx.draw_kamada_kawai(
             graph,
@@ -145,7 +162,10 @@ class OperationPipeline:
             if is_numeric_dtype(df[column]):
                 self.add_operation(FillnaMean, [column])
             else:
-                if df[column].dtype.name == "object" and df[column].nunique() < 10:
+                if (
+                    df[column].dtype.name in ("object", "category")
+                    and df[column].nunique() < 10
+                ):
                     self.add_operation(LabelEncoding, [column])
                 else:
                     self.add_operation(Drop, [column])

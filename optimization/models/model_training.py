@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
 
+from optimization.data_operations import OPERATIONS
 from optimization.data_operations.operation_pipeline import OperationPipeline
 
 
@@ -81,13 +82,20 @@ class RandomForestClassifierModel(Model):
             self.model.fit(data_train, target_train)
             metrics = self.model.score(data_test, target_test)
         except ValueError:
-            # backup_pipeline = OperationPipeline(OPERATIONS)
-            # backup_pipeline.build_default_pipeline(data_train)
-            # backup_pipeline.fit_transform(data_train)
-            # backup_pipeline.transform(data_test)
-            self.pipeline.build_default_pipeline(data_train)
-            self.pipeline.fit_transform(data_train)
-            self.pipeline.transform(data_test)
+            # self.pipeline.build_default_pipeline(data_train)
+            # self.pipeline.fit_transform(data_train)
+            # self.pipeline.transform(data_test)
+            backup_pipeline = OperationPipeline(OPERATIONS)
+            backup_pipeline.build_default_pipeline(data_train)
+            backup_pipeline.fit_transform(data_train)
+            backup_pipeline.transform(data_test)
+            for column in data_train:
+                if column not in data_test.columns:
+                    data_test[column] = 0
+            for column in data_test:
+                if column not in data_train.columns:
+                    data_test.drop(columns=column, inplace=True)
+            data_test = data_test[data_train.columns]
 
             self.model.fit(data_train, target_train)
             metrics = self.model.score(data_test, target_test)

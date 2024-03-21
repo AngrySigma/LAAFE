@@ -9,6 +9,25 @@ from optimization.data_operations.operation_aliases import PipelineNode
 
 @dataclass
 class BaseLLMTemplate:
+    def __init__(self, message_order: tuple[str, ...] | None = None) -> None:
+        self.messages: dict[str, str] = {}
+        self.message_order = message_order or (
+            "experiment_description",
+            "dataset",
+            "instruction",
+        )
+
+    def generate_initial_llm_message(self, **kwargs):
+        for paragraph in self.message_order:
+            self.messages[paragraph] = kwargs.get(paragraph, "")
+
+    def __str__(self):
+        message = [self.messages[paragraph] for paragraph in self.message_order]
+        return "\n".join(message)
+
+
+@dataclass
+class LLMDAGTemplate(BaseLLMTemplate):
     nodes: tuple[PipelineNode]
     experiment_description: str = (
         "You should optimize directed acyclic graph structure to improve the metric."
@@ -36,14 +55,13 @@ class BaseLLMTemplate:
         "instruction",
     )
 
-    def __init__(self, operators, previous_evaluations=None):
-        self.operators = [OPERATIONS[operator] for operator in operators]
+    def __init__(self, previous_evaluations=None):
+        super().__init__()
         self.previous_evaluations = (
             previous_evaluations
             if (previous_evaluations is not None)
             else "Previous pipeline evaluations and corresponding metrics:"
         )
-        self.messages = {}
 
 
 @dataclass
@@ -73,6 +91,7 @@ class LLMTemplate:
         "Operation inputs have to match the columns of the dataset. "
         "Avoid repeating operation pipelines."
     )
+    initial_advice: str = ""
     message_order: tuple[str, ...] = (
         "experiment_description",
         "output_format",
@@ -82,14 +101,14 @@ class LLMTemplate:
         "instruction",
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.operators: list[PipelineNode] = [
             OPERATIONS[operator] for operator in self.operators
         ]
         self.previous_evaluations = (
             "Previous pipeline evaluations and corresponding metrics:"
         )
-        self.messages = {}
+        self.messages: dict[str, str] = {}
 
     def generate_initial_llm_message(
         self,
@@ -114,12 +133,15 @@ class LLMTemplate:
             self.messages["previous_evaluations"] += (
                 f"\nInitial evaluation: {metrics}, " f"Pipeline: {operations_pipeline}"
             )
+        self.messages["initial_advice"] = (
+            "Some advices to perform the task better\n" + self.initial_advice
+        )
         self.messages["instruction"] = self.instruction
 
     def update_evaluations(
         self, label: str, metrics: dict[str, float], operations_pipeline: str
     ):
-        if not self.messages["previous_evaluations"]:
+        if not self.messages.get("previous_evaluations"):
             self.messages["previous_evaluations"] = self.previous_evaluations_template()
         self.messages["previous_evaluations"] += (
             f"\n{label}: {metrics['accuracy']}, " f"Pipeline: {operations_pipeline}"

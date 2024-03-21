@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from time import sleep
 
 import numpy as np
 import pyperclip
@@ -13,7 +14,9 @@ from optimization.data_operations.operation_pipeline import (
     OperationPipelineGenetic,
 )
 from optimization.llm.gpt import ChatMessage
+from optimization.llm.llm_templates import BaseLLMTemplate, LLMTemplate
 from optimization.optimizers.base import BaseOptimizer
+from optimization.utils.function_tools import timeout
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +44,35 @@ TEST_OPERATION_PIPELINE = np.array(
 
 
 class FeatureOptimizer(BaseOptimizer):
-    def __init__(self, cfg: DictConfig) -> None:
-        super().__init__(cfg)
+    def __init__(
+        self,
+        dataset,
+        cfg: DictConfig,
+        initial_advice: str | None = None,
+        results_dir=None,
+    ) -> None:
+        super().__init__(dataset, cfg, results_dir=results_dir)
+        if cfg.experiment.give_initial_advice and initial_advice is None:
+            initial_advice_template = BaseLLMTemplate(
+                message_order=tuple(cfg.dataset_advice.message_order)
+            )
+            initial_advice_template.generate_initial_llm_message(
+                **dict(cfg.dataset_advice.messages)
+            )
+            message = self.get_message(llm_template=initial_advice_template)
+            initial_advice = self.get_initial_advice_completion(message)
+        self.llm_template = LLMTemplate(
+            operators=cfg.llm.operators,
+            experiment_description=cfg.llm.experiment_description,
+            output_format=cfg.llm.output_format,
+            available_nodes_description=cfg.llm.available_nodes_description,
+            instruction=cfg.llm.instruction,
+            message_order=cfg.llm.message_order,
+            initial_advice=initial_advice if initial_advice is not None else "",
+        )
         self.model = MODELS[cfg.model_type]
 
-    def train_initial_model(self, dataset, dataset_dir: Path):
+    def train_initial_model(self, dataset, dataset_dir: Path | None = None):
         operations_pipeline = OperationPipeline(
             operations=OPERATIONS, split_by=self.cfg.llm.operation_split
         )
@@ -53,29 +80,47 @@ class FeatureOptimizer(BaseOptimizer):
             dataset.data.copy(), dataset.target.copy(), test_size=0.2
         )
         operations_pipeline.build_default_pipeline(data_train)
-        operations_pipeline.draw_pipeline(dataset_dir / "pipeline_0.png")
+        if dataset_dir is not None:
+            operations_pipeline.draw_pipeline(dataset_dir / "pipeline_0.png")
         data_train = operations_pipeline.fit_transform(data_train)
         data_test = operations_pipeline.transform(data_test)
 
         metrics = self.model(random_state=42, pipeline=operations_pipeline).train(
             data_train, target_train, data_test, target_test
         )
-        self.write_model_evaluation(metrics)
+        if self.results_dir is not None:
+            self.write_model_evaluation(metrics)
         return metrics, operations_pipeline
 
-    def get_message(self):
-        return ChatMessage(str(self.llm_template))
+    # def get_message(self):
+    #     return ChatMessage(str(self.llm_template))
+
+    def get_message(self, llm_template=None) -> ChatMessage:
+        return ChatMessage(
+            str(llm_template if llm_template is not None else self.llm_template)
+        )
 
     def get_completion(self, message):
         if not self.cfg.experiment.test_mode:
             return self.chatbot.get_completion(chat_messages=message)
 
-        if not self.cfg.experiment.interactive_mode:
-            return str(self._get_test_pipeline())
+        match self.cfg.experiment.test_mode:
+            case "interactive":
+                pyperclip.copy(message.content)
+                return input("Enter completion: ")
+            case "random_predefined":
+                return str(self._get_test_pipeline())
+            case "random_search":
+                return self._get_random_search_pipeline()
 
-        pyperclip.copy(message.content)
-        return input("Enter completion: ")
+    def get_initial_advice_completion(self, message):
+        if not self.cfg.experiment.test_mode:
+            sleep(15)
+            return self.chatbot.get_completion(chat_messages=message)
 
+        return "INITIAL ADVICE (test run): do something"
+
+    @timeout(120)
     def fit_model(self, dataset, completion, plot_path: str | None = None):
         np.random.seed(42)
         (data_train, data_test, target_train, target_test) = train_test_split(
@@ -86,14 +131,15 @@ class FeatureOptimizer(BaseOptimizer):
         )
         operations_pipeline.parse_pipeline(completion)
         pipeline_str = str(operations_pipeline)
-        operations_pipeline.fit_transform(data_train)
-        operations_pipeline.transform(data_test)
+        data_train = operations_pipeline.fit_transform(data_train)
+        data_test = operations_pipeline.transform(data_test)
         metrics = self.model(random_state=42, pipeline=operations_pipeline).train(
             data_train, target_train, data_test, target_test
         )
         if plot_path is not None:
             operations_pipeline.draw_pipeline(plot_path)
-        self.write_model_evaluation(metrics)
+        if self.results_dir is not None:
+            self.write_model_evaluation(metrics)
         return pipeline_str, metrics
 
     def _get_test_pipeline(self):
@@ -103,12 +149,41 @@ class FeatureOptimizer(BaseOptimizer):
         ].tolist()
         return self.cfg.llm.operation_split.join(operations_test)
 
+    def _get_random_search_pipeline(self):
+        return self.cfg.llm.operation_split.join(
+            self._get_random_node() for _ in range(np.random.randint(1, 10))
+        )
+
+    def _get_random_node(self):
+        np.random.seed()
+        return (
+            np.random.choice(self.cfg.llm.operators)
+            + "("
+            + ",".join(
+                np.random.choice(
+                    self.dataset.data.columns,
+                    size=np.random.randint(1, 3),
+                    replace=False,
+                )
+            )
+            + ")"
+        )
+
 
 class FeatureOptimizerGenetic(FeatureOptimizer):
-    def __init__(self, cfg: DictConfig) -> None:
-        super().__init__(cfg)
+    def __init__(
+        self,
+        dataset,
+        cfg: DictConfig,
+        initial_advice: str | None = None,
+        results_dir=None,
+    ) -> None:
+        super().__init__(
+            dataset, cfg, initial_advice=initial_advice, results_dir=results_dir
+        )
         self.model = MODELS[cfg.model_type]
 
+    @timeout(300)
     def fit_model(self, dataset, completion, plot_path: str | None = None):
         metrics = []
         operations_pipelines = OperationPipelineGenetic(
@@ -149,8 +224,13 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
         if not self.cfg.experiment.test_mode:
             return self.chatbot.get_completion(chat_messages=message)
 
-        if not self.cfg.experiment.interactive_mode:
-            return "\n".join([self._get_test_pipeline() for _ in range(population)])
-
-        pyperclip.copy(message.content)
-        return input("Enter completion: ")
+        match self.cfg.experiment.test_mode:
+            case "interactive":
+                pyperclip.copy(message.content)
+                return input("Enter completion: ")
+            case "random_predefined":
+                return "\n".join([self._get_test_pipeline() for _ in range(population)])
+            case "random_search":
+                return "\n".join(
+                    [self._get_random_search_pipeline() for _ in range(population)]
+                )
