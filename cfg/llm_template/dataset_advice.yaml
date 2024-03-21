@@ -1,0 +1,7 @@
+message_order:
+  - "experiment_description"
+  - "dataset"
+  - "instruction"
+
+experiment_description: "You have a dataset with the following description. The task is feature engineering for tabular datasets to improve the performance of the machine learning model."
+instruction: "Now you should perform the first step. Please, provide the data insights and possible metafeatures to get better data processing pipeline. You can also directly advice the operations. Please, only give brief textual advice, avoid using code or anything else. You should fit in the limit of 500 characters."

@@ -58,11 +58,15 @@ class Add(Operation):
 
     @classmethod
     def description(cls):
-        return 'Add two input columns together to a new column "add"'
+        return (
+            "Add two input columns together to a new column "
+            '"add_{number of previous add operations + 1}"'
+        )
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df["+".join(self.inp)] = df[self.inp].sum(axis=1)
+        num = len(df.filter(regex=r"^add_[\d]+").columns)
+        df[f"add_{num}"] = df[self.inp].sum(axis=1)
         return df
 
     def transform(self, df):
@@ -75,11 +79,15 @@ class Sub(Operation):
 
     @classmethod
     def description(cls):
-        return 'Subtract two input columns together to a new column "sub"'
+        return (
+            "Subtract two input columns together to a new column"
+            ' "sub_{number of previous sub operations + 1}"'
+        )
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df["-".join(self.inp)] = df[self.inp[0]].sub([self.inp[1]])
+        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        df[f"sub_{num}"] = df[self.inp[0]].sub([self.inp[1]])
         return df
 
     def transform(self, df):
@@ -92,11 +100,15 @@ class Mul(Operation):
 
     @classmethod
     def description(cls):
-        return 'Multiply two input columns together to a new column "mul"'
+        return (
+            "Multiply two input columns together to a new column"
+            ' "mul_number of previous mul operations + 1"'
+        )
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df["*".join(self.inp)] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
+        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        df[f"mul_{num}"] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
 
     def transform(self, df):
@@ -109,11 +121,15 @@ class Div(Operation):
 
     @classmethod
     def description(cls):
-        return 'Divide two input columns together to a new column "div"'
+        return (
+            "Divide two input columns together to a new column"
+            ' "div_{number of previous div operations + 1}"'
+        )
 
     def fit_transform(self, df):
         super().fit_transform(df)
-        df["/".join(self.inp)] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
+        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        df[f"div_{num}"] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
         return df
 
     def transform(self, df):
@@ -127,7 +143,7 @@ class Pca(Operation):
 
     @classmethod
     def description(cls):
-        return "Create new column from PCA on input columns"
+        return "Create new columns pca_0, pca_1 ... from PCA on input columns"
 
     def __call__(self, df):
         return self.fit_transform(df)
@@ -273,7 +289,7 @@ class Binning(Operation):
 
     @classmethod
     def description(cls):
-        return "Binning of numerical features"
+        return "Binning of numerical features. Inplace operation"
 
     def __call__(self, df):
         return self.fit_transform(df)
@@ -304,7 +320,7 @@ class LabelEncoding(Operation):
 
     @classmethod
     def description(cls):
-        return "Label encoding of categorical features"
+        return "Label encoding of categorical features. Inplace operation"
 
     def __call__(self, df):
         return self.fit_transform(df)
@@ -319,7 +335,11 @@ class LabelEncoding(Operation):
 
     def transform(self, df):
         for col in self.inp:
-            df[col] = self.label_encoders[col].transform(df[col])
+            if df[col].dtype.name == "category":
+                df[col] = df[col].astype("object")
+            present = df[col].isin(self.label_encoders[col].classes_)
+            df[col][present] = self.label_encoders[col].transform(df[col][present])
+            df[col][-present] = -1
         return df
 
 

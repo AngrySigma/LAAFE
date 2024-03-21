@@ -3,7 +3,7 @@ import numpy as np
 
 
 def plot_metrics_history(
-    metrics_history: list[float], plot_path: str, metric="Accuracy"
+    metrics_history: list[float], plot_path: str | None = None, metric="Accuracy"
 ):
     # maybe, it would be better to get all the metrics from the optimizer
     # and plot populations
@@ -15,4 +15,7 @@ def plot_metrics_history(
     plt.xlabel("Iteration")
     plt.ylabel(metric)
     plt.legend(["Accuracy", "Best Accuracy"])
-    plt.savefig(plot_path)
+    if plot_path is not None:
+        plt.savefig(plot_path)
+    else:
+        plt.show()
