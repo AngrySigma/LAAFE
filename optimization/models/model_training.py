@@ -6,8 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
 
-from src.optimization.data_operations import OPERATIONS
-from src.optimization.data_operations.operation_pipeline import OperationPipeline
+from optimization.data_operations.operation_pipeline import OperationPipeline
 
 
 class Model(ABC):
@@ -78,11 +77,10 @@ class RandomForestClassifierModel(Model):
         )
 
     def train(self, data_train, target_train, data_test, target_test):
-        err = False
         try:
             self.model.fit(data_train, target_train)
             metrics = self.model.score(data_test, target_test)
-        except ValueError as e:
+        except ValueError:
             # backup_pipeline = OperationPipeline(OPERATIONS)
             # backup_pipeline.build_default_pipeline(data_train)
             # backup_pipeline.fit_transform(data_train)
@@ -93,7 +91,6 @@ class RandomForestClassifierModel(Model):
 
             self.model.fit(data_train, target_train)
             metrics = self.model.score(data_test, target_test)
-            err = e
         # TODO: we can invoke next request for the LLM to fix the error
         return {
             "accuracy": metrics

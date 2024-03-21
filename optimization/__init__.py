@@ -1,4 +1,4 @@
-from src.optimization.models.model_training import (
+from optimization.models.model_training import (
     CatboostClassifierModel,
     LinearClassifierModel,
     RandomForestClassifierModel,

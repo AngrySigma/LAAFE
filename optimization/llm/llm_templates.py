@@ -2,12 +2,9 @@ from dataclasses import dataclass
 
 import hydra
 
-from src.optimization.data_operations import OPERATIONS
-from src.optimization.data_operations.dataset_loaders import (
-    DatasetLoader,
-    OpenMLDataset,
-)
-from src.optimization.data_operations.operation_aliases import PipelineNode
+from optimization.data_operations import OPERATIONS
+from optimization.data_operations.dataset_loaders import DatasetLoader, OpenMLDataset
+from optimization.data_operations.operation_aliases import PipelineNode
 
 
 @dataclass
@@ -115,8 +112,7 @@ class LLMTemplate:
         if metrics is not None and operations_pipeline is not None:
             self.messages["previous_evaluations"] = self.previous_evaluations_template()
             self.messages["previous_evaluations"] += (
-                f"\nInitial evaluation: {metrics['accuracy']}, "
-                f"Pipeline: {operations_pipeline}"
+                f"\nInitial evaluation: {metrics}, " f"Pipeline: {operations_pipeline}"
             )
         self.messages["instruction"] = self.instruction
 
@@ -138,7 +134,7 @@ class LLMTemplate:
         return "\n".join(message)
 
 
-@hydra.main(version_base=None, config_path="D:/PhD/LAAFE/cfg/", config_name="cfg")
+@hydra.main(version_base=None, config_path="/cfg/", config_name="cfg")
 def main(cfg):
     dataset_ids = [
         40945,

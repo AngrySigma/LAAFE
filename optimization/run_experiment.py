@@ -5,11 +5,11 @@ from time import sleep
 import hydra
 from omegaconf import DictConfig
 
-from src.optimization.optimizers.feature_optimizer import (
+from optimization.optimizers.feature_optimizer import (
     FeatureOptimizer,
     FeatureOptimizerGenetic,
 )
-from src.optimization.utils.visualisation import plot_metrics_history
+from optimization.utils.visualisation import plot_metrics_history
 
 
 def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
