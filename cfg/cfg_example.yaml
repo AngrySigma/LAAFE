@@ -1,3 +1,8 @@
+defaults:
+  - _self_
+  - llm_template: llm_template
+  - initial_advice: initial_advice
+
 problem_type: "classification"
 model_type: "random_forest_classifier"
 # choice from catboost_classifier, linear_classifier, svm_classifier, random_forest_classifier
@@ -28,18 +33,13 @@ regression:
     - 204
     - 210
     - 560
-llm: # llm message is constructed here
-  experiment_description: "You should perform a feature engineering for the provided dataset to improve the performance of the model. "
-  output_format: "The output is an operation pipeline written as in PIPELINE EXAMPLE:\n\toperation1(df_column)->operation2(df_column_1, df_column_2)->operationN()\nEmpty brackets mean that operation is applied to all columns of the dataset.\nPlease, don't use spaces between operations and inputs. Name operations exactly as they are listed in initial message. Do not add any other information to the output."
-  available_nodes_description: "Available data operations are the following"
-  instruction: "Based on the information provided, please, choose the operations you want to use in your pipeline and write them in the output format. Operation inputs have to match the columns of the dataset. Please, do not propose the pipelines already met in history."
-  message_order:
-    - "experiment_description"
-    - "output_format"
-    - "available_nodes"
-    - "dataset"
-    - "previous_evaluations"
-    - "instruction"
+
+llm:
+  experiment_description: ${llm_template.experiment_description}
+  output_format: ${llm_template.output_format}
+  available_nodes_description: ${llm_template.available_nodes_description}
+  instruction: ${llm_template.instruction}
+  message_order: ${llm_template.message_order}
   operation_split: "->"
   operators:
     - "add"
@@ -59,8 +59,14 @@ llm: # llm message is constructed here
     openai_api_organization: "org-..." # your openai organization
     openai_api_key: "sk-..." # your openai api key
     model_name: "gpt-3.5-turbo"
+    sleep_timeout: 20
+
+dataset_advice: ${initial_advice}
+
 experiment:
+  give_initial_advice: True # or False if no multistep optimization is needed
   test_mode: False
-  interactive_mode: False
+# choice from random_search, random_predefined, interactive or None
   num_iterations: 10
   root_path: "/home/user/LAAFE" # your project path
+  save_results: True
