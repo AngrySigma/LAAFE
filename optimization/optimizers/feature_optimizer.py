@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from optimization import MODELS
 from optimization.data_operations import OPERATIONS
+from optimization.data_operations.dataset_loaders import OpenMLDataset
 from optimization.data_operations.operation_pipeline import (
     OperationPipeline,
     OperationPipelineGenetic,
@@ -46,10 +47,10 @@ TEST_OPERATION_PIPELINE = np.array(
 class FeatureOptimizer(BaseOptimizer):
     def __init__(
         self,
-        dataset,
+        dataset: OpenMLDataset,
         cfg: DictConfig,
         initial_advice: str | None = None,
-        results_dir=None,
+        results_dir: Path | None = None,
     ) -> None:
         super().__init__(dataset, cfg, results_dir=results_dir)
         if cfg.experiment.give_initial_advice and initial_advice is None:
@@ -72,7 +73,9 @@ class FeatureOptimizer(BaseOptimizer):
         )
         self.model = MODELS[cfg.model_type]
 
-    def train_initial_model(self, dataset, dataset_dir: Path | None = None):
+    def train_initial_model(
+        self, dataset: OpenMLDataset, dataset_dir: Path | None = None
+    ) -> tuple[dict[str, float], OperationPipeline]:
         operations_pipeline = OperationPipeline(
             operations=OPERATIONS, split_by=self.cfg.llm.operation_split
         )
@@ -95,12 +98,12 @@ class FeatureOptimizer(BaseOptimizer):
     # def get_message(self):
     #     return ChatMessage(str(self.llm_template))
 
-    def get_message(self, llm_template=None) -> ChatMessage:
+    def get_message(self, llm_template: BaseLLMTemplate | None = None) -> ChatMessage:
         return ChatMessage(
             str(llm_template if llm_template is not None else self.llm_template)
         )
 
-    def get_completion(self, message):
+    def get_completion(self, message: ChatMessage) -> str:
         if not self.cfg.experiment.test_mode:
             return self.chatbot.get_completion(chat_messages=message)
 
@@ -112,16 +115,22 @@ class FeatureOptimizer(BaseOptimizer):
                 return str(self._get_test_pipeline())
             case "random_search":
                 return self._get_random_search_pipeline()
+            case _:
+                return ""
 
-    def get_initial_advice_completion(self, message):
+    def get_initial_advice_completion(self, message: ChatMessage) -> str:
         if not self.cfg.experiment.test_mode:
             sleep(15)
             return self.chatbot.get_completion(chat_messages=message)
 
-        return "INITIAL ADVICE (test run): do something"
+        return (
+            "INITIAL ADVICE TEST RUN: here will be the instruction from the first step"
+        )
 
     @timeout(120)
-    def fit_model(self, dataset, completion, plot_path: str | None = None):
+    def fit_model(
+        self, dataset: OpenMLDataset, completion: str, plot_path: str | None = None
+    ) -> tuple[str, dict[str, float]]:
         np.random.seed(42)
         (data_train, data_test, target_train, target_test) = train_test_split(
             dataset.data.copy(), dataset.target.copy(), test_size=0.2
@@ -142,22 +151,25 @@ class FeatureOptimizer(BaseOptimizer):
             self.write_model_evaluation(metrics)
         return pipeline_str, metrics
 
-    def _get_test_pipeline(self):
+    def _get_test_pipeline(self) -> str:
         np.random.seed()
         operations_test = TEST_OPERATION_PIPELINE[
             np.random.randint(0, 2, len(TEST_OPERATION_PIPELINE)).astype(bool)
         ].tolist()
-        return self.cfg.llm.operation_split.join(operations_test)
+        splitter: str = self.cfg.llm.operation_split
+        return splitter.join(operations_test)
 
-    def _get_random_search_pipeline(self):
-        return self.cfg.llm.operation_split.join(
+    def _get_random_search_pipeline(self) -> str:
+        splitter: str = self.cfg.llm.operation_split
+        return splitter.join(
             self._get_random_node() for _ in range(np.random.randint(1, 10))
         )
 
-    def _get_random_node(self):
+    def _get_random_node(self) -> str:
         np.random.seed()
+        operator: str = np.random.choice(self.cfg.llm.operators)
         return (
-            np.random.choice(self.cfg.llm.operators)
+            operator
             + "("
             + ",".join(
                 np.random.choice(
@@ -173,10 +185,10 @@ class FeatureOptimizer(BaseOptimizer):
 class FeatureOptimizerGenetic(FeatureOptimizer):
     def __init__(
         self,
-        dataset,
+        dataset: OpenMLDataset,
         cfg: DictConfig,
         initial_advice: str | None = None,
-        results_dir=None,
+        results_dir: Path | None = None,
     ) -> None:
         super().__init__(
             dataset, cfg, initial_advice=initial_advice, results_dir=results_dir
@@ -184,7 +196,9 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
         self.model = MODELS[cfg.model_type]
 
     @timeout(300)
-    def fit_model(self, dataset, completion, plot_path: str | None = None):
+    def fit_model(
+        self, dataset: OpenMLDataset, completion: str, plot_path: str | None = None
+    ) -> tuple[str, dict[str, float]]:
         metrics = []
         operations_pipelines = OperationPipelineGenetic(
             operations=OPERATIONS, split_by=self.cfg.llm.operation_split
@@ -220,7 +234,7 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
         self.write_model_evaluation(top_metric)
         return top_pipeline, top_metric
 
-    def get_completion(self, message, population=1):
+    def get_completion(self, message: ChatMessage, population: int = 1) -> str:
         if not self.cfg.experiment.test_mode:
             return self.chatbot.get_completion(chat_messages=message)
 
@@ -234,3 +248,5 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
                 return "\n".join(
                     [self._get_random_search_pipeline() for _ in range(population)]
                 )
+            case _:
+                return ''

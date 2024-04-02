@@ -41,5 +41,11 @@ ignore-signatures = "yes"
 
 min-similarity-lines = 7
 
+[tool.mypy]
+exclude = [
+    "^.*assumptino_optimizer.py$",  # TOML's double-quoted strings require escaping backslashes
+]
+disable_error_code = ["import-untyped"]
+
 [LOGGING]
 logging-format-style='old'

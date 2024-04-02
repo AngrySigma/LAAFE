@@ -14,49 +14,22 @@ from optimization.data_operations import OPERATIONS
 from optimization.data_operations.operation_aliases import (
     Drop,
     FillnaMean,
-    LabelEncoding,
+    LabelEncoding, Operation,
 )
 
 logger = logging.getLogger(__name__)
 
-
-def parse_data_operation_pipeline(data_operation_pipeline):
-    parsed_data_operation_pipeline = []
-    operations = re.findall(r"[a-zA-Z_]*\(.*?\)", data_operation_pipeline)
-    operations = [operation.split("(") for operation in operations]
-    for operation, args in operations:
-        args = args.strip(")")
-        inp = [arg.strip() for arg in args.split(",") if arg.strip()]
-        parsed_data_operation_pipeline.append(
-            (operation.lower().replace("_", ""), inp if inp else None)
-        )
-        # parsed_data_operation_pipeline[operation.lower()] = inp if inp else None
-    return parsed_data_operation_pipeline
-
-
-def apply_pipeline(df, parsed_data_operation_pipeline):
-    for operation, inp in parsed_data_operation_pipeline:
-        function = OPERATIONS[operation]
-        # inp = parsed_data_operation_pipeline[operation]
-        try:
-            df = function(df, inp)
-            # df[f'{operation}_{"_".join(inp)}'] = function(df, inp[0])
-        except (KeyError, TypeError) as e:
-            logging.error(r"Error in %s with %s: %s", operation, inp, e)
-    return df
-
-
 class OperationPipeline:
-    def __init__(self, operations, split_by="\n"):
-        self.operations_pipeline = []
+    def __init__(self, operations: dict[str, type[Operation]], split_by: str="\n") -> None:
+        self.operations_pipeline: list[Operation] = []
         self.operations = operations
         self.errors = None
         self.split_by = split_by
 
-    def add_operation(self, operation, inp=None):
+    def add_operation(self, operation: type[Operation], inp: list[str] | None = None) -> None:
         self.operations_pipeline.append(operation(inp if inp else None))
 
-    def validate_pipeline(self, df):
+    def validate_pipeline(self, df: pd.DataFrame) -> bool:
         test_df = deepcopy(df)
         drop_operations = []
         error_flag = False
@@ -80,7 +53,7 @@ class OperationPipeline:
             self.operations_pipeline.remove(operation)
         return error_flag
 
-    def fit_transform(self, df):
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         # drop_operations = []
         # self.errors = []
         self.validate_pipeline(df)
@@ -90,12 +63,12 @@ class OperationPipeline:
         # TODO: here too add some LLM invocation to fix the error
         return df
 
-    def transform(self, df):
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         for operation in self.operations_pipeline:
             df = operation.transform(df)
         return df
 
-    def parse_pipeline(self, completion):
+    def parse_pipeline(self, completion: str) -> None:
         completion = completion.strip().replace(" ", "")
         operations_pipeline = [
             operation.strip(r")").split("(")
@@ -116,10 +89,10 @@ class OperationPipeline:
                     e,
                     completion,
                 )
-        for operation, inp in parsed_pipeline:
-            self.add_operation(operation, inp if inp != [""] else None)
+        for operation_node, inp in parsed_pipeline:
+            self.add_operation(operation_node, inp if inp != [""] else None)
 
-    def draw_pipeline(self, save_path: Path | str | None = None):
+    def draw_pipeline(self, save_path: Path | str | None = None) -> nx.DiGraph:
         graph = nx.DiGraph()
         operation_names = [
             "\n".join([operation.__class__.__name__] + operation.inp)
@@ -157,7 +130,7 @@ class OperationPipeline:
         plt.savefig(save_path / f"pipeline_{str(num_pipelines)}")
         return graph
 
-    def build_default_pipeline(self, df):
+    def build_default_pipeline(self, df: pd.DataFrame) -> None:
         for column in df.columns:
             if is_numeric_dtype(df[column]):
                 self.add_operation(FillnaMean, [column])
@@ -170,7 +143,7 @@ class OperationPipeline:
                 else:
                     self.add_operation(Drop, [column])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.split_by.join(
             [
                 operation.__class__.__name__
@@ -183,23 +156,23 @@ class OperationPipeline:
 
 
 class OperationPipelineGenetic:
-    def __init__(self, operations, split_by="\n"):
+    def __init__(self, operations: dict[str, type[Operation]], split_by: str="\n") -> None:
         self.operations_pipelines = []
         self.operations = operations
         self.errors = None
         self.split_by = split_by
 
-    def parse_pipeline(self, completion):
+    def parse_pipeline(self, completion: str) -> None:
         pipelines = completion.strip().split("\n")
         for proposal_pipeline in pipelines:
             pipeline = OperationPipeline(self.operations, split_by=self.split_by)
             pipeline.parse_pipeline(proposal_pipeline)
             self.operations_pipelines.append(pipeline)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "\n".join([str(pipeline) for pipeline in self.operations_pipelines])
 
-    def fit_transform(self, df):
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         for pipeline in self.operations_pipelines:
             df = pipeline.fit_transform(df)
         return df

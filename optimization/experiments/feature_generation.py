@@ -13,10 +13,8 @@ from optimization.utils.visualisation import plot_metrics_history
 
 
 def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
-    results_dir = (
-        FeatureOptimizer.init_save_folder(cfg) if cfg.experiment.save_results else None
-    )
-    if cfg.experiment.save_results:
+    results_dir = FeatureOptimizer.init_save_folder(cfg)
+    if results_dir is not None and cfg.experiment.save_results:
         logging.basicConfig(filename=results_dir / ".log", level=log_level)
     logger = logging.getLogger(__name__)
     # logger.setLevel(log_level)
@@ -103,13 +101,15 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
             plot_metrics_history(metrics_history, dataset_dir / "metrics_history.png")
 
 
-def run_feature_generation_experiment_genetic(cfg, log_level=logging.INFO):
+def run_feature_generation_experiment_genetic(
+    cfg: DictConfig, log_level: int = logging.INFO
+) -> None:
     results_dir = (
         FeatureOptimizerGenetic.init_save_folder(cfg)
         if cfg.experiment.save_results
         else None
     )
-    if cfg.experiment.save_results:
+    if results_dir is not None and cfg.experiment.save_results:
         logging.basicConfig(filename=results_dir / ".log", level=log_level)
     logger = logging.getLogger(__name__)
     # logger.setLevel(log_level)

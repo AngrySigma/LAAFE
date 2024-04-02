@@ -3,8 +3,8 @@ import numpy as np
 
 
 def plot_metrics_history(
-    metrics_history: list[float], plot_path: str | None = None, metric="Accuracy"
-):
+    metrics_history: list[float], plot_path: str | None = None, metric: str = "Accuracy"
+) -> None:
     # maybe, it would be better to get all the metrics from the optimizer
     # and plot populations
     plt.close()

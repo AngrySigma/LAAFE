@@ -2,43 +2,45 @@ from dataclasses import dataclass
 
 import openml
 import pandas as pd
-
+from pandera.typing import Series
 
 @dataclass
 class OpenMLDataset:
     data: pd.DataFrame
-    target: pd.Series
+    target: Series[int | str]
     collection_date: str
     creator: str
     default_target_attribute: str
     description: str
-    features: dict
+    features: dict[str, dict[str, str]]
     language: str
     name: str
-    qualities: dict
+    qualities: dict[str, str]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"Dataset description will be provided further."
             f"\nSTART DATASET DESCRIPTION"
             f"\nDataset name: {self.name}"
             f"\nDescription:\n{self.description}"
+            f"\nData columns: {self.features}"
             f"\nData example:\n{self.data[:5]}"
             f"\nTarget:\n{self.target[:5]}"
-            f"\nCollection_date: {self.collection_date}"
+            f"\nDataset qualities: {self.qualities}"
             f"\nEND DATASET DESCRIPTION"
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 
 class DatasetLoader:
-    def __init__(self, dataset_ids):
+    def __init__(self, dataset_ids: list[int]) -> None:
+        super().__init__()
         self.dataset_ids = dataset_ids
 
     @staticmethod
-    def load_dataset(dataset_id):
+    def load_dataset(dataset_id: int) -> OpenMLDataset:
         dataset = openml.datasets.get_dataset(
             dataset_id,
             download_data=True,
@@ -69,16 +71,16 @@ class DatasetLoader:
             qualities,
         )
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> OpenMLDataset:
         return self.load_dataset(self.dataset_ids[item])
 
-    def __iter__(self):
+    def __iter__(self) -> OpenMLDataset:
         index = 0
         while index < len(self.dataset_ids):
             yield self.load_dataset(self.dataset_ids[index])
             index += 1
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.dataset_ids)
 
 
