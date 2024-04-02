@@ -1,3 +1,5 @@
+# pylint: skip-file
+# type: ignore
 import logging
 from pathlib import Path
 
@@ -17,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class AssumptionOptimizer(BaseOptimizer):
-    def __init__(self, cfg: DictConfig) -> None:
-        super().__init__(cfg)
+    def __init__(self, dataset, cfg: DictConfig) -> None:
+        super().__init__(dataset, cfg)
 
     def get_completion(self, message):
         # message = ChatMessage("\n".join(self.llm_template.messages))

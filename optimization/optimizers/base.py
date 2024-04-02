@@ -6,15 +6,18 @@ from pathlib import Path
 import numpy as np
 from omegaconf import DictConfig
 
+from optimization.data_operations.dataset_loaders import OpenMLDataset
+from optimization.data_operations.operation_pipeline import OperationPipeline
 from optimization.llm.gpt import ChatBot, ChatMessage
+from optimization.llm.llm_templates import LLMTemplate, BaseLLMTemplate
 
 
 class BaseOptimizer(ABC):
     def __init__(
         self,
-        dataset,
+        dataset: OpenMLDataset,
         cfg: DictConfig,
-        results_dir=None,
+        results_dir: Path | None = None,
     ) -> None:
         np.random.seed(42)
         self.results_dir = results_dir
@@ -38,7 +41,9 @@ class BaseOptimizer(ABC):
         return None
 
     @abstractmethod
-    def train_initial_model(self, dataset, dataset_dir: Path):
+    def train_initial_model(
+        self, dataset: OpenMLDataset, dataset_dir: Path
+    ) -> tuple[dict[str, float], OperationPipeline]:
         pass
 
     @abstractmethod
@@ -46,16 +51,17 @@ class BaseOptimizer(ABC):
         pass
 
     @abstractmethod
-    def get_message(self, llm_template=None) -> ChatMessage:
+    def get_message(self, llm_template: BaseLLMTemplate | None = None) -> ChatMessage:
         pass
 
-    def write_model_evaluation(self, metrics):
-        with open(
-            self.results_dir / "metric_results.txt", "a", encoding="utf-8"
-        ) as file:
-            file.write(f"\t{metrics}")
+    def write_model_evaluation(self, metrics: dict[str, float]) -> None:
+        if self.results_dir is not None:
+            with open(
+                self.results_dir / "metric_results.txt", "a", encoding="utf-8"
+            ) as file:
+                file.write(f"\t{metrics}")
 
-    def write_dataset_name(self, dataset_name):
+    def write_dataset_name(self, dataset_name: str) -> None:
         if self.results_dir is None:
             return
         with open(

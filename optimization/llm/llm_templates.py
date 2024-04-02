@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 
 import hydra
+from omegaconf import DictConfig
 
 from optimization.data_operations import OPERATIONS
 from optimization.data_operations.dataset_loaders import DatasetLoader, OpenMLDataset
-from optimization.data_operations.operation_aliases import PipelineNode
+from optimization.data_operations.operation_aliases import PipelineNode, \
+    Operation
+from optimization.data_operations.operation_pipeline import OperationPipeline
 
 
 @dataclass
@@ -17,11 +20,11 @@ class BaseLLMTemplate:
             "instruction",
         )
 
-    def generate_initial_llm_message(self, **kwargs):
+    def generate_initial_llm_message(self, **kwargs: dict[str, str]) -> None:
         for paragraph in self.message_order:
             self.messages[paragraph] = kwargs.get(paragraph, "")
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = [self.messages[paragraph] for paragraph in self.message_order]
         return "\n".join(message)
 
@@ -30,7 +33,7 @@ class BaseLLMTemplate:
 class LLMDAGTemplate(BaseLLMTemplate):
     nodes: tuple[PipelineNode]
     experiment_description: str = (
-        "You should optimize directed acyclic graph structure to improve the metric."
+        "You should optimize directed acyclic graph structure" " to improve the metric."
     )
     output_format: str = (
         "The output is a directed acyclic graph structure written as in"
@@ -55,7 +58,7 @@ class LLMDAGTemplate(BaseLLMTemplate):
         "instruction",
     )
 
-    def __init__(self, previous_evaluations=None):
+    def __init__(self, previous_evaluations: str | None = None) -> None:
         super().__init__()
         self.previous_evaluations = (
             previous_evaluations
@@ -66,7 +69,7 @@ class LLMDAGTemplate(BaseLLMTemplate):
 
 @dataclass
 class LLMTemplate:
-    operators: list[str]
+    operators: list[type[Operation]]
     experiment_description: str = (
         "You should perform a feature engineering for the provided "
         "dataset to improve the performance of the model. "
@@ -102,7 +105,7 @@ class LLMTemplate:
     )
 
     def __post_init__(self) -> None:
-        self.operators: list[PipelineNode] = [
+        self.operators: list[type[Operation]] = [
             OPERATIONS[operator] for operator in self.operators
         ]
         self.previous_evaluations = (
@@ -114,9 +117,8 @@ class LLMTemplate:
         self,
         dataset: OpenMLDataset,
         metrics: dict[str, float] | None = None,
-        operations_pipeline: str | None = None,
-    ):
-        # self.messages['initial_template'] = self.initial_template()
+        operations_pipeline: OperationPipeline | None = None,
+    ) -> None:
         self.messages["experiment_description"] = self.experiment_description
         self.messages["output_format"] = self.output_format
         self.messages["available_nodes_description"] = self.available_nodes_description
@@ -131,7 +133,9 @@ class LLMTemplate:
         if metrics is not None and operations_pipeline is not None:
             self.messages["previous_evaluations"] = self.previous_evaluations_template()
             self.messages["previous_evaluations"] += (
-                f"\nInitial evaluation: {metrics}, " f"Pipeline: {operations_pipeline}"
+                f"\nInitial evaluation: {metrics}, "
+                f"Pipeline:"
+                f" {operations_pipeline}"
             )
         self.messages["initial_advice"] = (
             "Some advices to perform the task better\n" + self.initial_advice
@@ -140,24 +144,24 @@ class LLMTemplate:
 
     def update_evaluations(
         self, label: str, metrics: dict[str, float], operations_pipeline: str
-    ):
+    ) -> None:
         if not self.messages.get("previous_evaluations"):
             self.messages["previous_evaluations"] = self.previous_evaluations_template()
         self.messages["previous_evaluations"] += (
             f"\n{label}: {metrics['accuracy']}, " f"Pipeline: {operations_pipeline}"
         )
 
-    def previous_evaluations_template(self):
+    def previous_evaluations_template(self) -> str:
         template = self.previous_evaluations
         return template
 
-    def __str__(self):
+    def __str__(self) -> str:
         message = [self.messages[paragraph] for paragraph in self.message_order]
         return "\n".join(message)
 
 
 @hydra.main(version_base=None, config_path="/cfg/", config_name="cfg")
-def main(cfg):
+def main(cfg: DictConfig) -> None:
     dataset_ids = [
         40945,
     ]

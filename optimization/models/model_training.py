@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+
+import pandas as pd
 from typing import Optional
 
 from catboost import CatBoostClassifier
@@ -22,7 +24,11 @@ class Model(ABC):
 
     @abstractmethod
     def train(
-        self, data_train, target_train, data_test, target_test
+        self,
+        data_train: pd.DataFrame,
+        target_train: pd.DataFrame,
+        data_test: pd.DataFrame,
+        target_test: pd.DataFrame,
     ) -> dict[str, float]:
         pass
 
@@ -34,7 +40,13 @@ class CatboostClassifierModel(Model):
         else:
             self.model = CatBoostClassifier()
 
-    def train(self, data_train, target_train, data_test, target_test):
+    def train(
+        self,
+        data_train: pd.DataFrame,
+        target_train: pd.DataFrame,
+        data_test: pd.DataFrame,
+        target_test: pd.DataFrame,
+    ) -> dict[str, float]:
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -47,7 +59,13 @@ class LinearClassifierModel(Model):
         else:
             self.model = SGDClassifier()
 
-    def train(self, data_train, target_train, data_test, target_test):
+    def train(
+        self,
+        data_train: pd.DataFrame,
+        target_train: pd.DataFrame,
+        data_test: pd.DataFrame,
+        target_test: pd.DataFrame,
+    ) -> dict[str, float]:
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -60,7 +78,13 @@ class SVMClassifierModel(Model):
         else:
             self.model = SVC()
 
-    def train(self, data_train, target_train, data_test, target_test):
+    def train(
+        self,
+        data_train: pd.DataFrame,
+        target_train: pd.DataFrame,
+        data_test: pd.DataFrame,
+        target_test: pd.DataFrame,
+    ) -> dict[str, float]:
         self.model.fit(data_train, target_train)
         metrics = self.model.score(data_test, target_test)
         return {"accuracy": metrics}
@@ -77,7 +101,13 @@ class RandomForestClassifierModel(Model):
             random_state=random_state if random_state is not None else None
         )
 
-    def train(self, data_train, target_train, data_test, target_test):
+    def train(
+        self,
+        data_train: pd.DataFrame,
+        target_train: pd.DataFrame,
+        data_test: pd.DataFrame,
+        target_test: pd.DataFrame,
+    ) -> dict[str, float]:
         try:
             self.model.fit(data_train, target_train)
             metrics = self.model.score(data_test, target_test)

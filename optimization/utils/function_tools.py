@@ -1,18 +1,21 @@
 import functools
 from threading import Thread
 
+from typing import Callable
 
-def timeout(timeout):
-    def deco(func):
+
+def timeout(timeout_time: int) -> Callable[..., object]:
+    def deco(func: Callable[..., object]) -> Callable[..., object]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            res = [
+        def wrapper(*args: tuple[object], **kwargs: dict[object, object]) -> object:
+            res: list[Exception | object] = [
                 TimeoutError(
-                    f"function [{func.__name__}] timeout [{timeout} seconds] exceeded!"
+                    f"function [{func.__name__}] timeout"
+                    f" [{timeout_time} seconds] exceeded!"
                 )
             ]
 
-            def new_func():
+            def new_func() -> None:
                 try:
                     res[0] = func(*args, **kwargs)
                 except Exception as e:  # pylint: disable=broad-except
@@ -22,7 +25,7 @@ def timeout(timeout):
             t.daemon = True
             try:
                 t.start()
-                t.join(timeout)
+                t.join(timeout_time)
             except Exception as je:
                 print("error starting thread")
                 raise je

@@ -12,10 +12,10 @@ from optimization.data_operations.operation_aliases import (
     OneHotEncoding,
     Pca,
     Std,
-    Sub,
+    Sub, Operation,
 )
 
-OPERATIONS = {
+OPERATIONS: dict[str, type[Operation]] = {
     "add": Add,
     "sub": Sub,
     "mul": Mul,
