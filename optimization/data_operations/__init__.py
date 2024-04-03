@@ -10,9 +10,10 @@ from optimization.data_operations.operation_aliases import (
     Minmax,
     Mul,
     OneHotEncoding,
+    Operation,
     Pca,
     Std,
-    Sub, Operation,
+    Sub,
 )
 
 OPERATIONS: dict[str, type[Operation]] = {

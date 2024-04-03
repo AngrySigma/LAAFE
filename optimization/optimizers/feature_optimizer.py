@@ -63,7 +63,7 @@ class FeatureOptimizer(BaseOptimizer):
             message = self.get_message(llm_template=initial_advice_template)
             initial_advice = self.get_initial_advice_completion(message)
         self.llm_template = LLMTemplate(
-            operators=cfg.llm.operators,
+            operator_types=cfg.llm.operators,
             experiment_description=cfg.llm.experiment_description,
             output_format=cfg.llm.output_format,
             available_nodes_description=cfg.llm.available_nodes_description,
@@ -249,4 +249,4 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
                     [self._get_random_search_pipeline() for _ in range(population)]
                 )
             case _:
-                return ''
+                return ""

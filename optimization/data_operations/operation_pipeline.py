@@ -14,19 +14,25 @@ from optimization.data_operations import OPERATIONS
 from optimization.data_operations.operation_aliases import (
     Drop,
     FillnaMean,
-    LabelEncoding, Operation,
+    LabelEncoding,
+    Operation,
 )
 
 logger = logging.getLogger(__name__)
 
+
 class OperationPipeline:
-    def __init__(self, operations: dict[str, type[Operation]], split_by: str="\n") -> None:
+    def __init__(
+        self, operations: dict[str, type[Operation]], split_by: str = "\n"
+    ) -> None:
         self.operations_pipeline: list[Operation] = []
         self.operations = operations
         self.errors = None
         self.split_by = split_by
 
-    def add_operation(self, operation: type[Operation], inp: list[str] | None = None) -> None:
+    def add_operation(
+        self, operation: type[Operation], inp: list[str] | None = None
+    ) -> None:
         self.operations_pipeline.append(operation(inp if inp else None))
 
     def validate_pipeline(self, df: pd.DataFrame) -> bool:
@@ -156,8 +162,10 @@ class OperationPipeline:
 
 
 class OperationPipelineGenetic:
-    def __init__(self, operations: dict[str, type[Operation]], split_by: str="\n") -> None:
-        self.operations_pipelines = []
+    def __init__(
+        self, operations: dict[str, type[Operation]], split_by: str = "\n"
+    ) -> None:
+        self.operations_pipelines: list[OperationPipeline] = []
         self.operations = operations
         self.errors = None
         self.split_by = split_by

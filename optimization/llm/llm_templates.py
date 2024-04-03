@@ -5,8 +5,7 @@ from omegaconf import DictConfig
 
 from optimization.data_operations import OPERATIONS
 from optimization.data_operations.dataset_loaders import DatasetLoader, OpenMLDataset
-from optimization.data_operations.operation_aliases import PipelineNode, \
-    Operation
+from optimization.data_operations.operation_aliases import Operation, PipelineNode
 from optimization.data_operations.operation_pipeline import OperationPipeline
 
 
@@ -20,7 +19,7 @@ class BaseLLMTemplate:
             "instruction",
         )
 
-    def generate_initial_llm_message(self, **kwargs: dict[str, str]) -> None:
+    def generate_initial_llm_message(self, **kwargs: str) -> None:
         for paragraph in self.message_order:
             self.messages[paragraph] = kwargs.get(paragraph, "")
 
@@ -69,7 +68,7 @@ class LLMDAGTemplate(BaseLLMTemplate):
 
 @dataclass
 class LLMTemplate:
-    operators: list[type[Operation]]
+    operator_types: list[str]
     experiment_description: str = (
         "You should perform a feature engineering for the provided "
         "dataset to improve the performance of the model. "
@@ -106,7 +105,7 @@ class LLMTemplate:
 
     def __post_init__(self) -> None:
         self.operators: list[type[Operation]] = [
-            OPERATIONS[operator] for operator in self.operators
+            OPERATIONS[operator] for operator in self.operator_types
         ]
         self.previous_evaluations = (
             "Previous pipeline evaluations and corresponding metrics:"
@@ -167,7 +166,7 @@ def main(cfg: DictConfig) -> None:
     ]
     dataset_loader = DatasetLoader(dataset_ids=dataset_ids)
     dataset = dataset_loader[0]
-    llm_template = LLMTemplate(operators=cfg.llm.operators)
+    llm_template = LLMTemplate(operator_types=cfg.llm.operators)
     llm_template.generate_initial_llm_message(dataset)
     llm_template.update_evaluations(
         "Evaluation 1",

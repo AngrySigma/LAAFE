@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 from optimization.data_operations.dataset_loaders import OpenMLDataset
 from optimization.data_operations.operation_pipeline import OperationPipeline
 from optimization.llm.gpt import ChatBot, ChatMessage
-from optimization.llm.llm_templates import LLMTemplate, BaseLLMTemplate
+from optimization.llm.llm_templates import BaseLLMTemplate
 
 
 class BaseOptimizer(ABC):

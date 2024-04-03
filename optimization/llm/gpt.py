@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 
 from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionFunctionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
+)
 
 
 @dataclass
@@ -33,17 +40,31 @@ class ChatBot:
         chat_messages = (
             [chat_messages] if isinstance(chat_messages, ChatMessage) else chat_messages
         )
-        messages: list[dict[str, str]] = [
-            {"role": message.role, "content": message.content}
+
+        message_types = {
+            "system": ChatCompletionSystemMessageParam,
+            "user": ChatCompletionUserMessageParam,
+            "assistant": ChatCompletionAssistantMessageParam,
+            "tool": ChatCompletionToolMessageParam,
+            "function": ChatCompletionFunctionMessageParam,
+        }
+
+        messages = [
+            message_types[message.role](role=message.role, content=message.content)
             for message in chat_messages
         ]
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=max_tokens,
-            n=n,
-            stop=stop,
-            temperature=temperature,
-        ).choices[0].message.content
 
-        return response if isinstance(response, str) else ''
+        response = (
+            self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=max_tokens,
+                n=n,
+                stop=stop,
+                temperature=temperature,
+            )
+            .choices[0]
+            .message.content
+        )
+
+        return response if isinstance(response, str) else ""
