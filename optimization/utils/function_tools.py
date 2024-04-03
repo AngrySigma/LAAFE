@@ -1,6 +1,5 @@
 import functools
 from threading import Thread
-
 from typing import Callable
 
 

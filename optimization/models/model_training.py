@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-
-import pandas as pd
 from typing import Optional
 
+import pandas as pd
 from catboost import CatBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier

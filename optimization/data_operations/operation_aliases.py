@@ -23,7 +23,9 @@ class PipelineNode(ABC):
 class Operation(PipelineNode, ABC):
     def __init__(self, inp: str | list[str] | None = None) -> None:
         # self.inp: list[str] | None = [inp] if isinstance(inp, str) else inp
-        self.inp = inp
+        self.inp: list[str] = (
+            inp if isinstance(inp, list) else [inp] if isinstance(inp, str) else []
+        )
 
     @abstractmethod
     def __call__(self, df: DataFrame) -> DataFrame:
@@ -31,17 +33,14 @@ class Operation(PipelineNode, ABC):
 
     @abstractmethod
     def fit_transform(self, df: DataFrame) -> DataFrame:
-        # self.inp = list(df.columns) if self.inp is None else list(self.inp)
-        # self.inp = typing.cast(list[str], self.inp)
-        # return df
         self.set_inp(df)
         return df
 
     def set_inp(self, df: DataFrame) -> None:
-        if isinstance(self.inp, str):
-            self.inp = [self.inp]
-        if self.inp is None:
+        # inp = self.inp
+        if not self.inp:
             self.inp = list(df.columns)
+        # return inp
 
     @abstractmethod
     def transform(self, df: DataFrame) -> DataFrame:
@@ -100,7 +99,11 @@ class Sub(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         # super().fit_transform(df)
-        self.set_inp(df)
+        # self.set_inp(df)
+        if isinstance(self.inp, str):
+            self.inp = [self.inp]
+        if self.inp is None:
+            self.inp = list(df.columns)
         num = len(df.filter(regex=r"^sub_[\d]+").columns)
         df[f"sub_{num}"] = df[self.inp[0]].sub([self.inp[1]])
         return df
@@ -121,8 +124,7 @@ class Mul(Operation):
         )
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
-        # super().fit_transform(df)
-        self.set_inp(df)
+        super().fit_transform(df)
         num = len(df.filter(regex=r"^sub_[\d]+").columns)
         df[f"mul_{num}"] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
@@ -183,7 +185,7 @@ class Pca(Operation):
 class FillnaMean(Operation):
     def __init__(self, inp: str | list[str] | None = None) -> None:
         super().__init__(inp)
-        self.mean: float | None = None
+        self.mean: "pd.Series[float]" | None = None
 
     @classmethod
     def description(cls) -> str:
@@ -194,9 +196,8 @@ class FillnaMean(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        # self.inp = df.columns if self.inp is None else self.inp
-        # TODO: [col for col in inp if col in df.columns]
-        self.mean = float(df[self.inp].mean())
+        mean = df[self.inp].mean().astype("float")
+        self.mean = mean
         df[self.inp] = df[self.inp].fillna(self.mean)
         return df
 
@@ -208,7 +209,7 @@ class FillnaMean(Operation):
 class FillnaMedian(Operation):
     def __init__(self, inp: str | list[str] | None = None) -> None:
         super().__init__(inp)
-        self.median: float | None = None
+        self.median: "pd.Series[float]" | None = None
 
     @classmethod
     def description(cls) -> str:
@@ -219,7 +220,7 @@ class FillnaMedian(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        self.median = float(df[self.inp].median())
+        self.median = df[self.inp].median().astype("float")
         df[self.inp] = df[self.inp].fillna(self.median)
         return df
 
@@ -282,8 +283,7 @@ class FrequencyEncoding(Operation):
         return self.fit_transform(df)
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
-        # super().fit_transform(df)
-        self.set_inp(df)
+        super().fit_transform(df)
         for col in self.inp:
             df[col] = df.groupby(col)[col].transform("count")
         return df

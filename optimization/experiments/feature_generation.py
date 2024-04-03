@@ -4,7 +4,7 @@ from time import sleep
 
 from omegaconf import DictConfig
 
-from optimization.data_operations.dataset_loaders import DatasetLoader
+from optimization.data_operations.dataset_loaders import DatasetLoader, OpenMLDataset
 from optimization.optimizers.feature_optimizer import (
     FeatureOptimizer,
     FeatureOptimizerGenetic,
@@ -20,6 +20,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
     # logger.setLevel(log_level)
 
     dataset_loader = DatasetLoader(dataset_ids=cfg[cfg.problem_type].datasets)
+    dataset: OpenMLDataset
     for num, dataset in enumerate(dataset_loader):
         dataset.data.rename(columns=lambda x: x.lower(), inplace=True)
         optimizer = FeatureOptimizer(dataset, cfg, results_dir=results_dir)
@@ -30,7 +31,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
             if optimizer.results_dir is not None
             else None
         )
-        if cfg.experiment.save_results:
+        if dataset_dir is not None and cfg.experiment.save_results:
             os.makedirs(dataset_dir)
         logger.info(
             r"Processing dataset %s/%s: %s",
@@ -90,7 +91,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
                 #     f.write("\nCompletion:" + completion + "\n")
                 #     f.write(f"\n{type(e).__name__}, {str(e)}")
             else:
-                if cfg.experiment.save_results:
+                if dataset_dir is not None and cfg.experiment.save_results:
                     with open(
                         dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
                     ) as f:
@@ -98,7 +99,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
             if not cfg.experiment.test_mode:
                 sleep(cfg.llm.gpt.sleep_timeout)  # to avoid openai api limit
         if cfg.experiment.save_results:
-            plot_metrics_history(metrics_history, dataset_dir / "metrics_history.png")
+            plot_metrics_history(metrics_history, dataset_dir)
 
 
 def run_feature_generation_experiment_genetic(
@@ -115,6 +116,7 @@ def run_feature_generation_experiment_genetic(
     # logger.setLevel(log_level)
 
     dataset_loader = DatasetLoader(dataset_ids=cfg[cfg.problem_type].datasets)
+    dataset: OpenMLDataset
     for num, dataset in enumerate(dataset_loader):
         dataset.data.rename(columns=lambda x: x.lower(), inplace=True)
         optimizer = FeatureOptimizerGenetic(dataset, cfg, results_dir=results_dir)
@@ -124,7 +126,7 @@ def run_feature_generation_experiment_genetic(
             if optimizer.results_dir is not None
             else None
         )
-        if cfg.experiment.save_results:
+        if dataset_dir is not None and cfg.experiment.save_results:
             os.makedirs(dataset_dir)
         logger.info(
             r"Processing dataset %s/%s: %s",
@@ -167,9 +169,12 @@ def run_feature_generation_experiment_genetic(
                     e,
                     completion,
                 )
-
-            with open(dataset_dir / "prompt_result.txt", "w", encoding="utf-8") as f:
-                f.write(str(optimizer.llm_template))
+            if dataset_dir is not None and cfg.experiment.save_results:
+                with open(
+                    dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
+                ) as f:
+                    f.write(str(optimizer.llm_template))
             if not cfg.experiment.test_mode:
                 sleep(cfg.llm.gpt.sleep_timeout)  # to avoid openai api limit
-        plot_metrics_history(metrics_history, dataset_dir / "metrics_history.png")
+        if cfg.experiment.save_results:
+            plot_metrics_history(metrics_history, dataset_dir)

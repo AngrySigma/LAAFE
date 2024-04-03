@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Iterable, Iterator
 
 import openml
 import pandas as pd
@@ -34,7 +35,7 @@ class OpenMLDataset:
         return self.__repr__()
 
 
-class DatasetLoader:
+class DatasetLoader(Iterable[OpenMLDataset]):
     def __init__(self, dataset_ids: list[int]) -> None:
         super().__init__()
         self.dataset_ids = dataset_ids
@@ -74,7 +75,7 @@ class DatasetLoader:
     def __getitem__(self, item: int) -> OpenMLDataset:
         return self.load_dataset(self.dataset_ids[item])
 
-    def __iter__(self) -> OpenMLDataset:
+    def __iter__(self) -> Iterator[OpenMLDataset]:
         index = 0
         while index < len(self.dataset_ids):
             yield self.load_dataset(self.dataset_ids[index])
