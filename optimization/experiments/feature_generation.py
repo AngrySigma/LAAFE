@@ -52,7 +52,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
             message = optimizer.get_message()
             completion = optimizer.get_completion(message)
             try:
-                pipeline_str, metrics = optimizer.fit_model(
+                pipeline_str, metrics = optimizer.fit_model(  # type: ignore
                     dataset,
                     completion=completion,
                     plot_path=dataset_dir,
@@ -148,7 +148,7 @@ def run_feature_generation_experiment_genetic(
             message = optimizer.get_message()
             completion = optimizer.get_completion(message=message, population=10)
             try:
-                pipeline_str, metric = optimizer.fit_model(
+                pipeline_str, metric = optimizer.fit_model(  # type: ignore
                     dataset, completion=completion, plot_path=dataset_dir
                 )
                 metrics_history[iteration + 1] = metric["accuracy"]

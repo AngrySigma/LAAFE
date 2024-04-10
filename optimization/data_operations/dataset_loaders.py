@@ -1,23 +1,24 @@
 from dataclasses import dataclass
-from typing import Iterable, Iterator
+from typing import Any, Iterable, Iterator
 
 import openml
 import pandas as pd
-from pandera.typing import Series
+from numpy import ndarray
+from openml import OpenMLDataFeature
 
 
 @dataclass
 class OpenMLDataset:
     data: pd.DataFrame
-    target: Series[int | str]
+    target: ndarray[Any, Any] | Any
     collection_date: str
     creator: str
     default_target_attribute: str
     description: str
-    features: dict[str, dict[str, str]]
+    features: dict[int, OpenMLDataFeature]
     language: str
     name: str
-    qualities: dict[str, str]
+    qualities: dict[str, float]
 
     def __repr__(self) -> str:
         return (
@@ -52,14 +53,20 @@ class DatasetLoader(Iterable[OpenMLDataset]):
         data, target, _, _ = dataset.get_data(
             dataset_format="dataframe", target=dataset.default_target_attribute
         )
-        collection_date = dataset.collection_date
-        creator = dataset.creator
-        default_target_attribute = dataset.default_target_attribute
-        description = dataset.description
+        collection_date = (
+            dataset.collection_date if dataset.collection_date else "Unknown"
+        )
+        creator = dataset.creator if dataset.creator else "Unknown"
+        default_target_attribute = (
+            dataset.default_target_attribute
+            if dataset.default_target_attribute
+            else "Unknown"
+        )
+        description = dataset.description if dataset.description else "Unknown"
         features = dataset.features
-        language = dataset.language
-        name = dataset.name
-        qualities = dataset.qualities
+        language = dataset.language if dataset.language else "Unknown"
+        name = dataset.name if dataset.name else "Unknown"
+        qualities = dataset.qualities if dataset.qualities else {}
         return OpenMLDataset(
             data,
             target,
