@@ -66,7 +66,7 @@ class AssumptionOptimizer(BaseOptimizer):
             seed=42,
         )
         model.fit(features=data_train, target=target_train, predefined_model="auto")
-        prediction = model.predict(data_test)
+        prediction = model.predict(data_test)  # noqa: F841
         metrics = model.get_metrics(target_test)
         self.write_model_evaluation(metrics)
         # TODO: wrong return of nodes (no parents).

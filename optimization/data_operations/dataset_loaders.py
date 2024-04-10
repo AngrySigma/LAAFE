@@ -5,6 +5,7 @@ import openml
 import pandas as pd
 from pandera.typing import Series
 
+
 @dataclass
 class OpenMLDataset:
     data: pd.DataFrame
