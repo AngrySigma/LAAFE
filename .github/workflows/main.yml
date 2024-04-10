@@ -23,11 +23,15 @@ jobs:
       run: |
         pylint $(git ls-files '*.py')
 
-    - name: Python Black
-      # You may pin to the exact commit or the version.
-      # uses: cytopia/docker-black@49d77dfc9811e09dec98474b56acc73b71d3ac1e
-      uses: cytopia/docker-black@0.11
+    - name: Ruff Check
+      uses: jpetrucciani/ruff-check@0.1.0
       with:
-        # Path to check (defaults to current directory)
-        path: ./ # optional, default is ./
+        path: optimization # optional, default is .
+
+    - name: Mypy Check
+      uses: jpetrucciani/mypy-check@0.991
+      with:
+        path: optimization # optional, default is .
+     
+          
           
