@@ -43,10 +43,10 @@ min-similarity-lines = 7
 
 [tool.mypy]
 exclude = [
-    "^.*assumptino_optimizer.py$",
+    "^.*assumption_optimizer.py$",
 ]
-disable_error_code = ["import-untyped", "import"]
-
+ignore_missing_imports = true
+strict_optional = true
 
 [LOGGING]
 logging-format-style='old'
