@@ -46,7 +46,6 @@ exclude = [
     "^.*assumptino_optimizer.py$",
 ]
 disable_error_code = ["import-untyped"]
-plugins = ["pandera.mypy",]
 
 
 [LOGGING]
