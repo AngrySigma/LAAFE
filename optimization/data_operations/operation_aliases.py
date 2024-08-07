@@ -354,8 +354,8 @@ class LabelEncoding(Operation):
             if df[col].dtype.name == "category":
                 df[col] = df[col].astype("object")
             present = df[col].isin(self.label_encoders[col].classes_)
-            df[col][present] = self.label_encoders[col].transform(df[col][present])
-            df[col][-present] = -1
+            df.loc[present, col] = self.label_encoders[col].transform(df[col][present])
+            df.loc[-present, col] = -1
         return df
 
 
