@@ -22,7 +22,7 @@ class AssumptionOptimizer(BaseOptimizer):
     def __init__(self, dataset, cfg: DictConfig) -> None:
         super().__init__(dataset, cfg)
 
-    def get_completion(self, message):
+    def get_candidate(self, message):
         # message = ChatMessage("\n".join(self.llm_template.messages))
         #
         # np.random.seed()
@@ -35,7 +35,7 @@ class AssumptionOptimizer(BaseOptimizer):
         # return completion
 
         if not self.cfg.experiment.test_mode:
-            return self.chatbot.get_completion(chat_messages=message)
+            return self.chatbot.invoke([message]).content
 
         if not self.cfg.experiment.interactive_mode:
             return str(self._get_test_pipeline())

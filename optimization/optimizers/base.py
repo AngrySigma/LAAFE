@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import numpy as np
+from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 from optimization.data_operations.dataset_loaders import OpenMLDataset
 from optimization.data_operations.operation_pipeline import OperationPipeline
-from optimization.llm.gpt import ChatBot, ChatMessage
+from optimization.llm.gpt import ChatMessage
 from optimization.llm.llm_templates import BaseLLMTemplate
 
 
@@ -22,11 +23,7 @@ class BaseOptimizer(ABC):
         np.random.seed(42)
         self.results_dir = results_dir
         # init llm
-        self.chatbot = ChatBot(
-            api_key=cfg.llm.gpt.openai_api_key,
-            api_organization=cfg.llm.gpt.openai_api_organization,
-            model=cfg.llm.gpt.model_name,
-        )
+        self.chatbot = instantiate(cfg.llm.groq)
         self.dataset = dataset
         self.cfg = cfg
 
@@ -47,7 +44,7 @@ class BaseOptimizer(ABC):
         pass
 
     @abstractmethod
-    def get_completion(self, message: ChatMessage) -> str:
+    def get_candidate(self, message: ChatMessage) -> str:
         pass
 
     @abstractmethod
