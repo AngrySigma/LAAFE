@@ -125,7 +125,7 @@ class Mul(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        num = len(df.filter(regex=r"^mul_[\d]+").columns)
         df[f"mul_{num}"] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
 
