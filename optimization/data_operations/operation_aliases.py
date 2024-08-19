@@ -146,7 +146,7 @@ class Div(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        num = len(df.filter(regex=r"^div_[\d]+").columns)
         df[f"div_{num}"] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
         return df
 
