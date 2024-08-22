@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from hydra.utils import instantiate
+from langchain_core.messages import HumanMessage
 from omegaconf import DictConfig
 
 from optimization.data_operations.dataset_loaders import OpenMLDataset
@@ -44,7 +45,7 @@ class BaseOptimizer(ABC):
         pass
 
     @abstractmethod
-    def get_candidate(self, message: ChatMessage) -> str:
+    def get_candidate(self, message: HumanMessage) -> str:
         pass
 
     @abstractmethod

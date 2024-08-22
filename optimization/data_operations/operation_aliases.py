@@ -4,7 +4,12 @@ from typing import Any
 import pandas as pd
 from pandas import DataFrame
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+from sklearn.preprocessing import (
+    LabelEncoder,
+    MinMaxScaler,
+    OneHotEncoder,
+    StandardScaler,
+)
 
 
 class PipelineNode(ABC):
@@ -360,6 +365,10 @@ class LabelEncoding(Operation):
 
 
 class OneHotEncoding(Operation):
+    def __init__(self, inp):
+        super().__init__(inp)
+        self.encoder = OneHotEncoder(sparse_output=False)
+
     @classmethod
     def description(cls) -> str:
         return "One hot encoding of categorical features"
@@ -369,14 +378,24 @@ class OneHotEncoding(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        for col in self.inp:
-            df = pd.concat(
-                [df, pd.get_dummies(df[col], prefix=col).astype(int)], axis=1
-            )
-            df.drop(columns=[col], inplace=True)
+        data = df[self.inp]
+        self.encoder.fit(data)
+        data = pd.DataFrame(
+            columns=self.encoder.get_feature_names_out(),
+            data=self.encoder.transform(data),
+            index=df.index,
+        )
+        df.drop(columns=self.inp, inplace=True)
+        df = pd.concat([df, data], axis=1)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        # if there are new features in the test set, it will fail likely.
-        # solution: save the dummies values and use them for test set
-        return self.fit_transform(df)
+        data = df[self.inp]
+        data = pd.DataFrame(
+            columns=self.encoder.get_feature_names_out(),
+            data=self.encoder.transform(data),
+            index=df.index,
+        )
+        df.drop(columns=self.inp, inplace=True)
+        df = pd.concat([df, data], axis=1)
+        return df
