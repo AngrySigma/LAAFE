@@ -52,6 +52,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
             message = optimizer.get_message()
             completion = optimizer.get_candidate(message)
             try:
+                # TODO: create custom exception for this
                 pipeline_str, metrics = optimizer.fit_model(  # type: ignore
                     dataset,
                     completion=completion,
@@ -71,13 +72,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
                     metrics["accuracy"],
                 )
                 metrics_history[iteration + 1] = metrics["accuracy"]
-            except (
-                KeyError,
-                ValueError,
-                TypeError,
-                ZeroDivisionError,
-                TimeoutError,
-            ) as e:
+            except (TimeoutError, AssertionError) as e:
                 logger.error(
                     rf"Iteration {iteration + 1}: %s:%s. Completion: %s",
                     e.__class__.__name__,
@@ -90,7 +85,7 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
                 #     f.write(str(optimizer.llm_template))
                 #     f.write("\nCompletion:" + completion + "\n")
                 #     f.write(f"\n{type(e).__name__}, {str(e)}")
-            else:
+            except Exception as e:
                 if dataset_dir is not None and cfg.experiment.save_results:
                     with open(
                         dataset_dir / "prompt_result.txt", "w", encoding="utf-8"

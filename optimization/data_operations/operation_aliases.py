@@ -3,6 +3,7 @@ from typing import Any
 
 import pandas as pd
 from pandas import DataFrame
+from pandas.api.types import is_numeric_dtype
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
     LabelEncoder,
@@ -130,6 +131,9 @@ class Mul(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        assert all(
+            is_numeric_dtype(df[col]) for col in self.inp
+        ), "Not all columns are numeric"
         num = len(df.filter(regex=r"^mul_[\d]+").columns)
         df[f"mul_{num}"] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
@@ -203,11 +207,11 @@ class FillnaMean(Operation):
         super().fit_transform(df)
         mean = df[self.inp].mean().astype("float")
         self.mean = mean
-        df[self.inp] = df[self.inp].fillna(self.mean)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.mean)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        df[self.inp] = df[self.inp].fillna(self.mean)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.mean)
         return df
 
 
@@ -226,11 +230,11 @@ class FillnaMedian(Operation):
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
         self.median = df[self.inp].median().astype("float")
-        df[self.inp] = df[self.inp].fillna(self.median)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.median)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        df[self.inp] = df[self.inp].fillna(self.median)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.median)
         return df
 
 
@@ -318,19 +322,16 @@ class Binning(Operation):
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
         for col in self.inp:
+            assert is_numeric_dtype(df[col])
             df[col], self.bins[col] = pd.qcut(
                 df[col], 10, duplicates="drop", retbins=True, labels=False
             )
-            # label_encoder = LabelEncoder()
-            # df[col] = label_encoder.fit_transform(df[col])
-            # self.label_encoders[col] = label_encoder
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
         # TODO: here, for test set, binning will be different. need to be fixed
         for col in self.inp:
             df[col] = pd.cut(df[col], self.bins[col], duplicates="drop", labels=False)
-            # df[col] = self.label_encoders[col].transform(df[col])
         return df
 
 
@@ -359,8 +360,9 @@ class LabelEncoding(Operation):
             if df[col].dtype.name == "category":
                 df[col] = df[col].astype("object")
             present = df[col].isin(self.label_encoders[col].classes_)
-            df.loc[present, col] = self.label_encoders[col].transform(df[col][present])
-            df.loc[-present, col] = -1
+            proxy = pd.Series(index=df[col].index, data=-1)
+            proxy[present] = self.label_encoders[col].transform(df[col][present])
+            df[col] = proxy
         return df
 
 
@@ -380,6 +382,7 @@ class OneHotEncoding(Operation):
         super().fit_transform(df)
         data = df[self.inp]
         self.encoder.fit(data)
+        assert len(self.encoder.get_feature_names_out()) < 100, "Too many features"
         data = pd.DataFrame(
             columns=self.encoder.get_feature_names_out(),
             data=self.encoder.transform(data),
@@ -390,6 +393,13 @@ class OneHotEncoding(Operation):
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
+        for col in self.inp:
+            items = pd.Series(
+                [col + "_" + item for item in df[col].unique().astype(str)]
+            )
+            assert all(
+                items.isin(self.encoder.get_feature_names_out())
+            ), "Some input features are not present in encoder"
         data = df[self.inp]
         data = pd.DataFrame(
             columns=self.encoder.get_feature_names_out(),
