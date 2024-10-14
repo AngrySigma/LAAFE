@@ -109,7 +109,6 @@ class FeatureOptimizer(BaseOptimizer):
     def get_candidate(self, message: HumanMessage) -> str:
         if not self.cfg.experiment.test_mode:
             return self.chatbot.invoke([message]).content
-
         match self.cfg.experiment.test_mode:
             case "interactive":
                 pyperclip.copy(message.content)
@@ -123,8 +122,10 @@ class FeatureOptimizer(BaseOptimizer):
 
     def get_initial_advice_completion(self, message: HumanMessage) -> str:
         if not self.cfg.experiment.test_mode:
-            sleep(15)
-            return self.chatbot.invoke([message]).content
+            sleep(self.cfg.llm.sleep_timeout)
+            response = self.chatbot.invoke([message]).content
+            sleep(self.cfg.llm.sleep_timeout)
+            return response
 
         return (
             "INITIAL ADVICE TEST RUN: here will be the instruction from the first step"

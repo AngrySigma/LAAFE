@@ -35,7 +35,7 @@ regression:
     - 560
 
 llm:
-  llm_backend: "groq" # openai or groq
+  llm_backend: "vsegpt"
   experiment_description: ${llm_template.experiment_description}
   output_format: ${llm_template.output_format}
   available_nodes_description: ${llm_template.available_nodes_description}
@@ -53,17 +53,24 @@ llm:
     - "std"
     - "minmax"
     - "drop"
+#    - "frequencyencoding"
     - "binning"
     - "labelencoding"
     - "onehotencoding"
   sleep_timeout: 20
-
-  gpt:
-    _target_: optimization.llm.openai_api.OpenAIGPT3ChatBot
-    openai_api_organization: "org-..." # your openai organization
-    openai_api_key: "sk-..." # your openai api key
+  vsegpt:
+    _target_: langchain_openai.ChatOpenAI
+    temperature: 0
     model_name: "gpt-3.5-turbo"
 
+    api_key: "sk-or-vv-..."
+    openai_api_base: "https://api.vsegpt.ru/v1/"
+  openai:
+    _target_: langchain_openai.ChatOpenAI
+    temperature: 0
+    model_name: "gpt-3.5-turbo"
+    organization: "org-..."  # original
+    api_key: "sk-..."
   groq:
     _target_: langchain_groq.ChatGroq
     model_name: "llama3-70b-8192"
@@ -77,5 +84,5 @@ experiment:
   test_mode: False
 # choice from random_search, random_predefined, interactive or None
   num_iterations: 10
-  root_path: "/home/user/LAAFE/" # your project path
+  root_path: "/home/root/path"
   save_results: True

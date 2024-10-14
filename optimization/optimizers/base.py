@@ -23,8 +23,7 @@ class BaseOptimizer(ABC):
     ) -> None:
         np.random.seed(42)
         self.results_dir = results_dir
-        # init llm
-        self.chatbot = instantiate(cfg.llm.groq)
+        self.chatbot = instantiate(cfg.llm[cfg.llm.llm_backend])
         self.dataset = dataset
         self.cfg = cfg
 
@@ -57,7 +56,7 @@ class BaseOptimizer(ABC):
             with open(
                 self.results_dir / "metric_results.txt", "a", encoding="utf-8"
             ) as file:
-                file.write(f"\t{metrics}")
+                file.write(f"\n\t-{metrics['accuracy']}")
 
     def write_dataset_name(self, dataset_name: str) -> None:
         if self.results_dir is None:

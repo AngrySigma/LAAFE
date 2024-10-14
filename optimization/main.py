@@ -9,7 +9,9 @@ from optimization.experiments.feature_generation import (  # noqa: F401 # pylint
 )
 
 
-@hydra.main(version_base="1.2", config_path="D:/PhD/LAAFE/cfg", config_name="cfg")
+@hydra.main(
+    version_base="1.2", config_path="/home/iiov/llm/LAAFE/cfg", config_name="cfg"
+)
 def main(cfg: DictConfig) -> None:
     run_feature_generation_experiment(cfg, log_level=logging.DEBUG)
     # run_feature_generation_experiment_genetic(cfg, log_level=logging.DEBUG)

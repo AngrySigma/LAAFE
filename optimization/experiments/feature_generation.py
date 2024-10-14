@@ -1,7 +1,9 @@
 import logging
 import os
+from pathlib import Path
 from time import sleep
 
+import hydra
 from omegaconf import DictConfig
 
 from optimization.data_operations.dataset_loaders import DatasetLoader, OpenMLDataset
@@ -13,7 +15,7 @@ from optimization.utils.visualisation import plot_metrics_history
 
 
 def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
-    results_dir = FeatureOptimizer.init_save_folder(cfg)
+    results_dir = Path(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
     if results_dir is not None and cfg.experiment.save_results:
         logging.basicConfig(filename=results_dir / ".log", level=log_level)
     logger = logging.getLogger(__name__)
@@ -85,16 +87,18 @@ def run_feature_generation_experiment(cfg: DictConfig, log_level: int) -> None:
                 #     f.write(str(optimizer.llm_template))
                 #     f.write("\nCompletion:" + completion + "\n")
                 #     f.write(f"\n{type(e).__name__}, {str(e)}")
-            except Exception as e:
-                if dataset_dir is not None and cfg.experiment.save_results:
-                    with open(
-                        dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
-                    ) as f:
-                        f.write(str(optimizer.llm_template))
+            # except Exception as e:
+            #     if dataset_dir is not None and cfg.experiment.save_results:
+            #         with open(
+            #             dataset_dir / "prompt_result.txt", "w", encoding="utf-8"
+            #         ) as f:
+            #             f.write(str(optimizer.llm_template))
             if not cfg.experiment.test_mode:
                 sleep(cfg.llm.sleep_timeout)  # to avoid openai api limit
         if cfg.experiment.save_results:
             plot_metrics_history(metrics_history, dataset_dir)
+            with open(dataset_dir / "prompt_result.txt", "w", encoding="utf-8") as f:
+                f.write(str(optimizer.llm_template))
 
 
 def run_feature_generation_experiment_genetic(

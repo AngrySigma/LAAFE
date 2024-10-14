@@ -42,13 +42,7 @@ class OperationPipeline:
         for operation in self.operations_pipeline:
             try:
                 test_df = operation.fit_transform(test_df)
-            except (
-                KeyError,
-                ValueError,
-                TypeError,
-                IndexError,
-                ZeroDivisionError,
-            ) as e:
+            except AssertionError as e:
                 logging.debug(
                     r"Error in %s with input %s: %s",
                     operation,
