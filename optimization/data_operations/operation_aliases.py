@@ -1,10 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
+from pandas.api.types import is_numeric_dtype
+from pandas.core.dtypes.common import is_bool_dtype
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+from sklearn.preprocessing import (
+    LabelEncoder,
+    MinMaxScaler,
+    OneHotEncoder,
+    StandardScaler,
+)
 
 
 class PipelineNode(ABC):
@@ -31,8 +39,17 @@ class Operation(PipelineNode, ABC):
     def __call__(self, df: DataFrame) -> DataFrame:
         pass
 
+    def bools_to_numeric(self, df):
+        for col in self.inp:
+            if is_bool_dtype(df[col]):
+                df[col] = int(df.col)
+        return df
+
     @abstractmethod
     def fit_transform(self, df: DataFrame) -> DataFrame:
+        assert all(
+            [e in df.columns for e in self.inp]
+        ), f"{self.__class__.__name__}: Columns are not in df"
         self.set_inp(df)
         return df
 
@@ -44,7 +61,9 @@ class Operation(PipelineNode, ABC):
 
     @abstractmethod
     def transform(self, df: DataFrame) -> DataFrame:
-        pass
+        assert all(
+            [e in df.columns for e in self.inp]
+        ), f"{self.__class__.__name__}: Columns are not in df"
 
 
 class Drop(Operation):
@@ -56,6 +75,7 @@ class Drop(Operation):
         return self.fit_transform(df)
 
     def transform(self, df: DataFrame) -> DataFrame:
+        super().transform(df)
         df.drop(columns=self.inp, inplace=True)
         return df
 
@@ -78,6 +98,8 @@ class Add(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(df[self.inp]), "Summation error: column is not numeric"
         num = len(df.filter(regex=r"^add_[\d]+").columns)
         df[f"add_{num}"] = df[self.inp].sum(axis=1)
         return df
@@ -98,8 +120,9 @@ class Sub(Operation):
         )
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
-        # super().fit_transform(df)
-        # self.set_inp(df)
+        super().fit_transform(df)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(df[self.inp]), "Summation error: column is not numeric"
         if isinstance(self.inp, str):
             self.inp = [self.inp]
         if self.inp is None:
@@ -125,7 +148,9 @@ class Mul(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(df[self.inp]), "Summation error: column is not numeric"
+        num = len(df.filter(regex=r"^mul_[\d]+").columns)
         df[f"mul_{num}"] = df[self.inp].cumprod(axis=1)[self.inp[-1]]
         return df
 
@@ -146,8 +171,11 @@ class Div(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        num = len(df.filter(regex=r"^sub_[\d]+").columns)
+        assert len(self.inp) > 1, "Too few input columns passed, at least 2 required"
+        assert is_numeric_dtype(df[self.inp]), "Column values are not numeric"
+        num = len(df.filter(regex=r"^div_[\d]+").columns)
         df[f"div_{num}"] = df[self.inp[0]].div(df[self.inp[1]], fill_value=0)
+        df.replace([np.inf, -np.inf, np.nan], 0, inplace=True)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
@@ -168,6 +196,7 @@ class Pca(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        assert is_numeric_dtype(df[self.inp]), "PCA error: column is not numeric"
         # TODO: fill na if there are any. moreover, this should be added to pipeline
         # self.inp = df.columns if self.inp is None else self.inp
         pca_result = self.pca.fit_transform(df[self.inp])
@@ -196,13 +225,17 @@ class FillnaMean(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(
+            df[self.inp]
+        ), "Std scaling error: column is not numeric"
         mean = df[self.inp].mean().astype("float")
         self.mean = mean
-        df[self.inp] = df[self.inp].fillna(self.mean)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.mean)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        df[self.inp] = df[self.inp].fillna(self.mean)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.mean)
         return df
 
 
@@ -220,12 +253,14 @@ class FillnaMedian(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(df[self.inp]), "Median error: column is not numeric"
         self.median = df[self.inp].median().astype("float")
-        df[self.inp] = df[self.inp].fillna(self.median)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.median)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        df[self.inp] = df[self.inp].fillna(self.median)
+        df[self.inp] = df[self.inp].infer_objects(copy=False).fillna(self.median)
         return df
 
 
@@ -243,6 +278,10 @@ class Std(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        df = self.bools_to_numeric(df)
+        assert is_numeric_dtype(
+            df[self.inp]
+        ), "Std scaling error: column is not numeric"
         df[self.inp] = self.scaler.fit_transform(df[self.inp])
         return df
 
@@ -266,6 +305,9 @@ class Minmax(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        assert is_numeric_dtype(
+            df[self.inp]
+        ), "Minmax scaling error: column is not numeric"
         df[self.inp] = self.scaler.fit_transform(df[self.inp])
         return df
 
@@ -312,20 +354,17 @@ class Binning(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
+        assert is_numeric_dtype(df[self.inp]), "Binning error: column is not numeric"
         for col in self.inp:
             df[col], self.bins[col] = pd.qcut(
                 df[col], 10, duplicates="drop", retbins=True, labels=False
             )
-            # label_encoder = LabelEncoder()
-            # df[col] = label_encoder.fit_transform(df[col])
-            # self.label_encoders[col] = label_encoder
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
         # TODO: here, for test set, binning will be different. need to be fixed
         for col in self.inp:
             df[col] = pd.cut(df[col], self.bins[col], duplicates="drop", labels=False)
-            # df[col] = self.label_encoders[col].transform(df[col])
         return df
 
 
@@ -354,12 +393,17 @@ class LabelEncoding(Operation):
             if df[col].dtype.name == "category":
                 df[col] = df[col].astype("object")
             present = df[col].isin(self.label_encoders[col].classes_)
-            df[col][present] = self.label_encoders[col].transform(df[col][present])
-            df[col][-present] = -1
+            proxy = pd.Series(index=df[col].index, data=-1)
+            proxy[present] = self.label_encoders[col].transform(df[col][present])
+            df[col] = proxy
         return df
 
 
 class OneHotEncoding(Operation):
+    def __init__(self, inp):
+        super().__init__(inp)
+        self.encoder = OneHotEncoder(sparse_output=False)
+
     @classmethod
     def description(cls) -> str:
         return "One hot encoding of categorical features"
@@ -369,14 +413,32 @@ class OneHotEncoding(Operation):
 
     def fit_transform(self, df: DataFrame) -> DataFrame:
         super().fit_transform(df)
-        for col in self.inp:
-            df = pd.concat(
-                [df, pd.get_dummies(df[col], prefix=col).astype(int)], axis=1
-            )
-            df.drop(columns=[col], inplace=True)
+        data = df[self.inp]
+        self.encoder.fit(data)
+        assert len(self.encoder.get_feature_names_out()) < 100, "Too many features"
+        data = pd.DataFrame(
+            columns=self.encoder.get_feature_names_out(),
+            data=self.encoder.transform(data),
+            index=df.index,
+        )
+        df.drop(columns=self.inp, inplace=True)
+        df = pd.concat([df, data], axis=1)
         return df
 
     def transform(self, df: DataFrame) -> DataFrame:
-        # if there are new features in the test set, it will fail likely.
-        # solution: save the dummies values and use them for test set
-        return self.fit_transform(df)
+        for col in self.inp:
+            items = pd.Series(
+                [col + "_" + item for item in df[col].unique().astype(str)]
+            )
+            assert all(
+                items.isin(self.encoder.get_feature_names_out())
+            ), "Some input features are not present in encoder"
+        data = df[self.inp]
+        data = pd.DataFrame(
+            columns=self.encoder.get_feature_names_out(),
+            data=self.encoder.transform(data),
+            index=df.index,
+        )
+        df.drop(columns=self.inp, inplace=True)
+        df = pd.concat([df, data], axis=1)
+        return df

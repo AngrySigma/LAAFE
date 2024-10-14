@@ -4,6 +4,7 @@ from time import sleep
 
 import numpy as np
 import pyperclip
+from langchain_core.messages import HumanMessage
 from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 
@@ -14,7 +15,6 @@ from optimization.data_operations.operation_pipeline import (
     OperationPipeline,
     OperationPipelineGenetic,
 )
-from optimization.llm.gpt import ChatMessage
 from optimization.llm.llm_templates import BaseLLMTemplate, LLMTemplate
 from optimization.optimizers.base import BaseOptimizer
 from optimization.utils.function_tools import timeout
@@ -98,15 +98,17 @@ class FeatureOptimizer(BaseOptimizer):
     # def get_message(self):
     #     return ChatMessage(str(self.llm_template))
 
-    def get_message(self, llm_template: BaseLLMTemplate | None = None) -> ChatMessage:
-        return ChatMessage(
-            str(llm_template if llm_template is not None else self.llm_template)
+    def get_message(self, llm_template: BaseLLMTemplate | None = None) -> HumanMessage:
+        return HumanMessage(
+            content=str(
+                llm_template if llm_template is not None else self.llm_template
+            ),
+            role="user",
         )
 
-    def get_completion(self, message: ChatMessage) -> str:
+    def get_candidate(self, message: HumanMessage) -> str:
         if not self.cfg.experiment.test_mode:
-            return self.chatbot.get_completion(chat_messages=message)
-
+            return self.chatbot.invoke([message]).content
         match self.cfg.experiment.test_mode:
             case "interactive":
                 pyperclip.copy(message.content)
@@ -118,10 +120,12 @@ class FeatureOptimizer(BaseOptimizer):
             case _:
                 return ""
 
-    def get_initial_advice_completion(self, message: ChatMessage) -> str:
+    def get_initial_advice_completion(self, message: HumanMessage) -> str:
         if not self.cfg.experiment.test_mode:
-            sleep(15)
-            return self.chatbot.get_completion(chat_messages=message)
+            sleep(self.cfg.llm.sleep_timeout)
+            response = self.chatbot.invoke([message]).content
+            sleep(self.cfg.llm.sleep_timeout)
+            return response
 
         return (
             "INITIAL ADVICE TEST RUN: here will be the instruction from the first step"
@@ -129,7 +133,10 @@ class FeatureOptimizer(BaseOptimizer):
 
     @timeout(120)
     def fit_model(
-        self, dataset: OpenMLDataset, completion: str, plot_path: str | None = None
+        self,
+        dataset: OpenMLDataset,
+        completion: str,
+        plot_path: str | None = None,
     ) -> tuple[str, dict[str, float]]:
         np.random.seed(42)
         (data_train, data_test, target_train, target_test) = train_test_split(
@@ -197,7 +204,10 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
 
     @timeout(300)
     def fit_model(
-        self, dataset: OpenMLDataset, completion: str, plot_path: str | None = None
+        self,
+        dataset: OpenMLDataset,
+        completion: str,
+        plot_path: str | None = None,
     ) -> tuple[str, dict[str, float]]:
         metrics = []
         operations_pipelines = OperationPipelineGenetic(
@@ -211,7 +221,9 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
             np.random.seed(42)
             try:
                 (data_train, data_test, target_train, target_test) = train_test_split(
-                    dataset.data.copy(), dataset.target.copy(), test_size=0.2
+                    dataset.data.copy(),
+                    dataset.target.copy(),
+                    test_size=0.2,
                 )
                 pipeline.fit_transform(data_train)
                 pipeline.transform(data_test)
@@ -234,9 +246,9 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
         self.write_model_evaluation(top_metric)
         return top_pipeline, top_metric
 
-    def get_completion(self, message: ChatMessage, population: int = 1) -> str:
+    def get_candidate(self, message: HumanMessage, population: int = 1) -> str:
         if not self.cfg.experiment.test_mode:
-            return self.chatbot.get_completion(chat_messages=message)
+            return self.chatbot.invoke([message]).content
 
         match self.cfg.experiment.test_mode:
             case "interactive":
@@ -248,5 +260,11 @@ class FeatureOptimizerGenetic(FeatureOptimizer):
                 return "\n".join(
                     [self._get_random_search_pipeline() for _ in range(population)]
                 )
+            case "genetic_search":
+                # get scores???
+                # selection
+                # crossover
+                # mutation
+                return ...
             case _:
                 return ""

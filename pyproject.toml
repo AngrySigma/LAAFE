@@ -1,6 +1,24 @@
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py312']
+target-version = 'py312'
+exclude = [
+    'venv',
+    '.git',
+    '.hg',
+    '.ipynb_checkpoints',
+    '.mypy_cache',
+    '.ruff_cache',
+    'site-packages'
+]
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.isort]
 multi_line_output = 3
@@ -8,6 +26,8 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
+skip = []
+skip_glob = ["docs/*", "venv/*", "test/*"]
 
 [tool.pylint.MASTER]
 ignore = []
@@ -38,15 +58,58 @@ attr-rgx = ["(.*[a-z][a-z0-9_]{1,30}|[a-z_])$"]
 [tool.pylint.SIMILARITIES]
 ignore-imports = "yes"
 ignore-signatures = "yes"
-
 min-similarity-lines = 7
 
 [tool.mypy]
 exclude = [
     "^.*assumption_optimizer.py$",
 ]
+strict = true
+untyped_calls_exclude = []
+warn_return_any = true
+warn_unreachable = true
 ignore_missing_imports = true
 strict_optional = true
 
 [LOGGING]
 logging-format-style='old'
+
+[tool.poetry]
+name = "laafe"
+version = "0.1.0"
+description = ""
+authors = ["Illarion Iov <illariov1809@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+catboost = "^1.2.5"
+hydra-core = "^1.3.2"
+openml = "^0.14.2"
+networkx = "^3.3"
+langchain = "^0.2.16"
+setuptools = "^74.1.1"
+langchain-groq = "^0.1.9"
+langchain-openai = "^0.1.23"
+jupyter = "^1.1.1"
+fedot = "^0.7.4"
+pyperclip = "^1.9.0"
+omegaconf = "^2.3.0"
+ruff = "^0.6.9"
+
+
+[tool.poetry.group.dev.dependencies]
+pyperclip = "^1.9.0"
+pylint = "^3.2.7"
+isort = "^5.13.2"
+mypy = "^1.11.2"
+ruff = "^0.6.3"
+
+
+[tool.poetry.group.deprecated.dependencies]
+openai = "^1.43.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

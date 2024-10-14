@@ -42,15 +42,12 @@ class OperationPipeline:
         for operation in self.operations_pipeline:
             try:
                 test_df = operation.fit_transform(test_df)
-            except (
-                KeyError,
-                ValueError,
-                TypeError,
-                IndexError,
-                ZeroDivisionError,
-            ) as e:
+            except AssertionError as e:
                 logging.debug(
-                    r"Error in %s with input %s: %s", operation, operation.inp, e
+                    r"Error in %s with input %s: %s",
+                    operation,
+                    operation.inp,
+                    e,
                 )
                 drop_operations.append(operation)
                 error_flag = True
@@ -109,7 +106,10 @@ class OperationPipeline:
         # graph.add_edges_from(operation_names)
 
         edges = list(
-            zip(list(range(len(operation_names))), list(range(1, len(operation_names))))
+            zip(
+                list(range(len(operation_names))),
+                list(range(1, len(operation_names))),
+            )
         )
         labels = dict(zip(list(range(len(operation_names))), operation_names))
 

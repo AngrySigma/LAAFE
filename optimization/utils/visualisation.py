@@ -14,7 +14,10 @@ def plot_metrics_history(
     plt.close()
     plt.plot(metrics_history, alpha=0.5, color="blue")
     plt.plot(
-        np.maximum.accumulate(metrics_history), alpha=0.75, color="red", linewidth=2
+        np.maximum.accumulate(metrics_history),
+        alpha=0.75,
+        color="red",
+        linewidth=2,
     )
     plt.xlabel("Iteration")
     plt.ylabel(metric)

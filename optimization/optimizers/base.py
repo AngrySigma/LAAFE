@@ -4,11 +4,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import numpy as np
+from hydra.utils import instantiate
+from langchain_core.messages import HumanMessage
 from omegaconf import DictConfig
 
 from optimization.data_operations.dataset_loaders import OpenMLDataset
 from optimization.data_operations.operation_pipeline import OperationPipeline
-from optimization.llm.gpt import ChatBot, ChatMessage
+from optimization.llm.gpt import ChatMessage
 from optimization.llm.llm_templates import BaseLLMTemplate
 
 
@@ -21,12 +23,7 @@ class BaseOptimizer(ABC):
     ) -> None:
         np.random.seed(42)
         self.results_dir = results_dir
-        # init llm
-        self.chatbot = ChatBot(
-            api_key=cfg.llm.gpt.openai_api_key,
-            api_organization=cfg.llm.gpt.openai_api_organization,
-            model=cfg.llm.gpt.model_name,
-        )
+        self.chatbot = instantiate(cfg.llm[cfg.llm.llm_backend])
         self.dataset = dataset
         self.cfg = cfg
 
@@ -47,7 +44,7 @@ class BaseOptimizer(ABC):
         pass
 
     @abstractmethod
-    def get_completion(self, message: ChatMessage) -> str:
+    def get_candidate(self, message: HumanMessage) -> str:
         pass
 
     @abstractmethod
@@ -59,7 +56,7 @@ class BaseOptimizer(ABC):
             with open(
                 self.results_dir / "metric_results.txt", "a", encoding="utf-8"
             ) as file:
-                file.write(f"\t{metrics}")
+                file.write(f"\n\t-{metrics['accuracy']}")
 
     def write_dataset_name(self, dataset_name: str) -> None:
         if self.results_dir is None:
