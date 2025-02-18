@@ -5,4 +5,5 @@
 LAAFE (LLM Assisted Automation of Feature Engineering for AutoML) is a tool for automatic feature generation for AutoML tasks. It aims to add feature-aware new features by using the dataset description. Better feature quality is achieved through black-box optimisation of data transformation pipeline.
 
 
-
+## Paper
+https://github.com/AngrySigma/LAAFE/blob/master/paper.pdf
